@@ -15,8 +15,8 @@ def main():
     parser.add_argument('--source', help='Source directory to scan for videos')
     parser.add_argument('--series-output', help='Output directory for series')
     parser.add_argument('--movie-output', help='Output directory for movies')
-    parser.add_argument('--dry-run', action='store_true', help='If set, only print actions without moving files')
-    parser.add_argument('--clean-up', action='store_true', help='If set, move non-video files to Deleted folder')
+    parser.add_argument('--dry-run', action='store_true', help='If set, only print actions without moving files', default=argparse.SUPPRESS)
+    parser.add_argument('--clean-up', action='store_true', help='If set, move non-video files to Deleted folder', default=argparse.SUPPRESS)
     parser.add_argument('--config', help='Path to TOML config file')
     parser.add_argument('--init-config', help='Generate a sample config TOML file at the given path and exit')
     args = parser.parse_args()
@@ -49,13 +49,18 @@ def main():
 
     # Merge config and CLI args (CLI takes precedence)
     def get_opt(opt, default=None):
+        # For booleans, only use CLI if explicitly set
+        if opt in ('dry_run', 'clean_up'):
+            if hasattr(args, opt):
+                return getattr(args, opt)
+            return config.get(opt, default)
         return getattr(args, opt) if getattr(args, opt) is not None else config.get(opt, default)
 
     source = get_opt('source')
     series_output = get_opt('series_output')
     movie_output = get_opt('movie_output')
-    dry_run = bool(get_opt('dry_run', False))
-    clean_up = bool(get_opt('clean_up', False))
+    dry_run = get_opt('dry_run', False)
+    clean_up = get_opt('clean_up', False)
 
     if not source or not series_output or not movie_output:
         print("Error: source, series-output, and movie-output must be specified (via CLI or config).", file=sys.stderr)
@@ -83,11 +88,11 @@ def main():
             results.append({
                 'file': video,
                 'type': kind,
-                'target': target_path
+                'target': target_path,
+                'output_dir': output_dir
             })
-            rename_and_move(video, kind, output_dir, dry_run=dry_run)
 
-        # Handle non-video files (cleanup)
+        # Prepare deleted files
         if clean_up:
             deleted_dir = os.path.join(source, "Deleted")
             if non_videos:
@@ -95,9 +100,47 @@ def main():
             for file in non_videos:
                 target_path = os.path.join(deleted_dir, os.path.basename(file))
                 deleted_results.append({'file': file, 'target': target_path})
-                if dry_run:
-                    print(f"Would move (delete): {file} -> {target_path}")
-                else:
+        # Print table summary using rich
+        table = Table()
+        table.add_column("File", style="cyan", no_wrap=True)
+        table.add_column("Type", style="magenta")
+        table.add_column("Target", style="green")
+        for r in results:
+            table.add_row(
+                os.path.basename(os.path.normpath(r['file'])),
+                r['type'],
+                os.path.normpath(r['target'])
+            )
+        console.print(table)
+
+        # Only show deleted table if --clean-up is specified
+        if clean_up and deleted_results:
+            deleted_table = Table(title="Files to be deleted...")
+            deleted_table.add_column("File", style="red", no_wrap=True)
+            deleted_table.add_column("Target", style="yellow")
+            for r in deleted_results:
+                deleted_table.add_row(
+                    os.path.basename(os.path.normpath(r['file'])),
+                    os.path.normpath(r['target'])
+                )
+            console.print(deleted_table)
+
+        # Prompt for confirmation if not dry-run
+        if not dry_run and (results or (clean_up and deleted_results)):
+            proceed = input("Proceed with file moves? [y/N] ").strip().lower()
+            if proceed != "y":
+                print("Aborted. No files were moved.")
+                sys.exit(0)
+
+            # Move video files
+            for r in results:
+                rename_and_move(r['file'], r['type'], r['output_dir'], dry_run=False)
+
+            # Move deleted files
+            if clean_up:
+                for r in deleted_results:
+                    file = r['file']
+                    target_path = r['target']
                     try:
                         if os.path.exists(target_path):
                             print(f"Warning: Deleted file '{target_path}' already exists. Skipping move.")
@@ -106,23 +149,6 @@ def main():
                         print(f"Moved (deleted): {file} -> {target_path}")
                     except Exception as e:
                         print(f"Failed to move (delete) {file}: {e}")
-        # Only show deleted table if --clean-up is specified
-        if clean_up and deleted_results:
-            deleted_table = Table(title="Files to be deleted...")
-            deleted_table.add_column("File", style="red", no_wrap=True)
-            deleted_table.add_column("Target", style="yellow")
-            for r in deleted_results:
-                deleted_table.add_row(os.path.basename(r['file']), r['target'])
-            console.print(deleted_table)
-
-        # Print table summary using rich
-        table = Table()
-        table.add_column("File", style="cyan", no_wrap=True)
-        table.add_column("Type", style="magenta")
-        table.add_column("Target", style="green")
-        for r in results:
-            table.add_row(os.path.basename(r['file']), r['type'], r['target'])
-        console.print(table)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

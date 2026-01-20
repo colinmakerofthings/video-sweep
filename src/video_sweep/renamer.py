@@ -5,6 +5,8 @@ import re
 def movie_new_filename(filename: str) -> str:
     """Generate new filename for a movie: title [year].ext. If no year, return None."""
     name, ext = os.path.splitext(filename)
+    # Remove all [ and ] from the original name
+    name = name.replace('[', '').replace(']', '')
     match = re.search(r'(\d{4})', name)
     if not match:
         return None
