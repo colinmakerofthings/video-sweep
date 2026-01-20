@@ -1,5 +1,3 @@
-
-
 import argparse
 import sys
 import os
@@ -10,35 +8,55 @@ from .finder import find_files
 from .classifier import classify_video
 from .renamer import rename_and_move
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Find, classify, rename, and move video files.")
-    parser.add_argument('--source', help='Source directory to scan for videos')
-    parser.add_argument('--series-output', help='Output directory for series')
-    parser.add_argument('--movie-output', help='Output directory for movies')
-    parser.add_argument('--dry-run', action='store_true', help='If set, only print actions without moving files', default=argparse.SUPPRESS)
-    parser.add_argument('--clean-up', action='store_true', help='If set, move non-video files to Deleted folder', default=argparse.SUPPRESS)
-    parser.add_argument('--config', help='Path to TOML config file')
-    parser.add_argument('--init-config', help='Generate a sample config TOML file at the given path and exit')
+    parser = argparse.ArgumentParser(
+        description="Find, classify, rename, and move video files."
+    )
+    parser.add_argument("--source", help="Source directory to scan for videos")
+    parser.add_argument("--series-output", help="Output directory for series")
+    parser.add_argument("--movie-output", help="Output directory for movies")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="If set, only print actions without moving files",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--clean-up",
+        action="store_true",
+        help="If set, move non-video files to Deleted folder",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument("--config", help="Path to TOML config file")
+    parser.add_argument(
+        "--init-config",
+        help="Generate a sample config TOML file at the given path and exit",
+    )
     args = parser.parse_args()
 
     # Handle --init-config
     if args.init_config:
         sample = (
-            '# Sample video-sweep config file\n'
+            "# Sample video-sweep config file\n"
             'source = "D:/Downloads"\n'
             'series_output = "D:/Media/Series"\n'
             'movie_output = "D:/Media/Movies"\n'
-            'clean_up = false\n'
-            'dry_run = false\n'
+            "clean_up = false\n"
+            "dry_run = false\n"
         )
-        with open(args.init_config, 'w', encoding='utf-8') as f:
+        with open(args.init_config, "w", encoding="utf-8") as f:
             f.write(sample)
         print(f"Sample config written to {args.init_config}")
         sys.exit(0)
 
     # Load config file if specified or present in current directory
     config = {}
-    config_path = args.config or (os.path.join(os.getcwd(), "config.toml") if os.path.exists("config.toml") else None)
+    config_path = args.config or (
+        os.path.join(os.getcwd(), "config.toml")
+        if os.path.exists("config.toml")
+        else None
+    )
     if config_path:
         try:
             with open(config_path, "rb") as f:
@@ -50,20 +68,27 @@ def main():
     # Merge config and CLI args (CLI takes precedence)
     def get_opt(opt, default=None):
         # For booleans, only use CLI if explicitly set
-        if opt in ('dry_run', 'clean_up'):
+        if opt in ("dry_run", "clean_up"):
             if hasattr(args, opt):
                 return getattr(args, opt)
             return config.get(opt, default)
-        return getattr(args, opt) if getattr(args, opt) is not None else config.get(opt, default)
+        return (
+            getattr(args, opt)
+            if getattr(args, opt) is not None
+            else config.get(opt, default)
+        )
 
-    source = get_opt('source')
-    series_output = get_opt('series_output')
-    movie_output = get_opt('movie_output')
-    dry_run = get_opt('dry_run', False)
-    clean_up = get_opt('clean_up', False)
+    source = get_opt("source")
+    series_output = get_opt("series_output")
+    movie_output = get_opt("movie_output")
+    dry_run = get_opt("dry_run", False)
+    clean_up = get_opt("clean_up", False)
 
     if not source or not series_output or not movie_output:
-        print("Error: source, series-output, and movie-output must be specified (via CLI or config).", file=sys.stderr)
+        print(
+            "Error: source, series-output, and movie-output must be specified (via CLI or config).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     try:
@@ -72,12 +97,13 @@ def main():
         results = []
         deleted_results = []
         from .renamer import movie_new_filename
+
         # Handle video files
         for video in videos:
             kind = classify_video(video)
-            output_dir = series_output if kind == 'series' else movie_output
+            output_dir = series_output if kind == "series" else movie_output
             filename = os.path.basename(video)
-            if kind == 'movie':
+            if kind == "movie":
                 new_filename = movie_new_filename(filename)
                 if new_filename:
                     target_path = os.path.join(output_dir, new_filename)
@@ -85,12 +111,14 @@ def main():
                     target_path = os.path.join(output_dir, filename)
             else:
                 target_path = os.path.join(output_dir, filename)
-            results.append({
-                'file': video,
-                'type': kind,
-                'target': target_path,
-                'output_dir': output_dir
-            })
+            results.append(
+                {
+                    "file": video,
+                    "type": kind,
+                    "target": target_path,
+                    "output_dir": output_dir,
+                }
+            )
 
         # Prepare deleted files
         if clean_up:
@@ -99,7 +127,7 @@ def main():
                 os.makedirs(deleted_dir, exist_ok=True)
             for file in non_videos:
                 target_path = os.path.join(deleted_dir, os.path.basename(file))
-                deleted_results.append({'file': file, 'target': target_path})
+                deleted_results.append({"file": file, "target": target_path})
         # Print table summary using rich
         table = Table()
         table.add_column("File", style="cyan", no_wrap=True)
@@ -107,9 +135,9 @@ def main():
         table.add_column("Target", style="green")
         for r in results:
             table.add_row(
-                os.path.basename(os.path.normpath(r['file'])),
-                r['type'],
-                os.path.normpath(r['target'])
+                os.path.basename(os.path.normpath(r["file"])),
+                r["type"],
+                os.path.normpath(r["target"]),
             )
         console.print(table)
 
@@ -120,8 +148,8 @@ def main():
             deleted_table.add_column("Target", style="yellow")
             for r in deleted_results:
                 deleted_table.add_row(
-                    os.path.basename(os.path.normpath(r['file'])),
-                    os.path.normpath(r['target'])
+                    os.path.basename(os.path.normpath(r["file"])),
+                    os.path.normpath(r["target"]),
                 )
             console.print(deleted_table)
 
@@ -134,16 +162,18 @@ def main():
 
             # Move video files
             for r in results:
-                rename_and_move(r['file'], r['type'], r['output_dir'], dry_run=False)
+                rename_and_move(r["file"], r["type"], r["output_dir"], dry_run=False)
 
             # Move deleted files
             if clean_up:
                 for r in deleted_results:
-                    file = r['file']
-                    target_path = r['target']
+                    file = r["file"]
+                    target_path = r["target"]
                     try:
                         if os.path.exists(target_path):
-                            print(f"Warning: Deleted file '{target_path}' already exists. Skipping move.")
+                            print(
+                                f"Warning: Deleted file '{target_path}' already exists. Skipping move."
+                            )
                             continue
                         os.rename(file, target_path)
                         print(f"Moved (deleted): {file} -> {target_path}")

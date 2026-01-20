@@ -1,6 +1,7 @@
 import os
 from video_sweep.renamer import rename_and_move
 
+
 def test_rename_and_move(tmp_path):
     src = tmp_path / "source"
     tgt = tmp_path / "target"
