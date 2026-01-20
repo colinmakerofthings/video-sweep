@@ -1,0 +1,15 @@
+LICENSE
+README.md
+pyproject.toml
+src/video_sweep/classifier.py
+src/video_sweep/cli.py
+src/video_sweep/finder.py
+src/video_sweep/renamer.py
+src/video_sweep.egg-info/PKG-INFO
+src/video_sweep.egg-info/SOURCES.txt
+src/video_sweep.egg-info/dependency_links.txt
+src/video_sweep.egg-info/entry_points.txt
+src/video_sweep.egg-info/top_level.txt
+tests/test_classifier.py
+tests/test_finder.py
+tests/test_renamer.py

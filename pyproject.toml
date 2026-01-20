@@ -1,0 +1,18 @@
+[project]
+name = "video-sweep"
+version = "0.1.0"
+description = "Minimal CLI tool to find, classify, rename, and move video files."
+	authors = [{ name = "Colin Brown", email = "colinmakerofthings@gmail.com" }]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+video-sweep = "video_sweep.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
