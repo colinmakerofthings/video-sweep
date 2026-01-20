@@ -25,7 +25,9 @@ def rename_and_move(
 ) -> None:
     """Rename and move the video file to the target directory. If dry_run, only print the action."""
     filename = os.path.basename(filepath)
-    os.makedirs(target_dir, exist_ok=True)
+    # Always move into a subdirectory named after the kind
+    kind_dir = os.path.join(target_dir, kind)
+    os.makedirs(kind_dir, exist_ok=True)
 
     # For movies, generate new filename
     if kind == "movie":
@@ -33,14 +35,14 @@ def rename_and_move(
         if not new_filename:
             print(f"Warning: No year found in '{filename}'. Skipping rename/move.")
             return
-        target_path = os.path.join(target_dir, new_filename)
+        target_path = os.path.join(kind_dir, new_filename)
         if os.path.exists(target_path):
             print(
                 f"Warning: Target file '{target_path}' already exists. Skipping move."
             )
             return
     else:
-        target_path = os.path.join(target_dir, filename)
+        target_path = os.path.join(kind_dir, filename)
         if os.path.exists(target_path):
             print(
                 f"Warning: Target file '{target_path}' already exists. Skipping move."
