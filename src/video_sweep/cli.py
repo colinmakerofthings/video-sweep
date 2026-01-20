@@ -20,11 +20,19 @@ def main():
     try:
         videos = find_videos(args.source)
         results = []
+        from .renamer import movie_new_filename
         for video in videos:
             kind = classify_video(video)
             output_dir = args.series_output if kind == 'series' else args.movie_output
             filename = os.path.basename(video)
-            target_path = os.path.join(output_dir, filename)
+            if kind == 'movie':
+                new_filename = movie_new_filename(filename)
+                if new_filename:
+                    target_path = os.path.join(output_dir, new_filename)
+                else:
+                    target_path = os.path.join(output_dir, filename)
+            else:
+                target_path = os.path.join(output_dir, filename)
             results.append({
                 'file': video,
                 'type': kind,
