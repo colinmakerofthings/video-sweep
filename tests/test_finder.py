@@ -1,4 +1,3 @@
-import os
 from video_sweep.finder import find_videos
 
 def test_find_videos(tmp_path):
