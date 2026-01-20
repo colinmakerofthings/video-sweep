@@ -5,7 +5,11 @@ description = "Minimal CLI tool to find, classify, rename, and move video files.
 	authors = [{ name = "Colin Brown", email = "colinmakerofthings@gmail.com" }]
 license = "MIT"
 readme = "README.md"
+
 requires-python = ">=3.8"
+dependencies = [
+	"tomli; python_version < '3.11'"
+]
 
 [project.scripts]
 video-sweep = "video_sweep.cli:main"

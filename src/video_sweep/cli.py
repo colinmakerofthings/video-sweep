@@ -5,29 +5,72 @@ import sys
 import os
 from rich.console import Console
 from rich.table import Table
+import tomli
 from .finder import find_files
 from .classifier import classify_video
 from .renamer import rename_and_move
 
 def main():
     parser = argparse.ArgumentParser(description="Find, classify, rename, and move video files.")
-    parser.add_argument('--source', required=True, help='Source directory to scan for videos')
-    parser.add_argument('--series-output', required=True, help='Output directory for series')
-    parser.add_argument('--movie-output', required=True, help='Output directory for movies')
+    parser.add_argument('--source', help='Source directory to scan for videos')
+    parser.add_argument('--series-output', help='Output directory for series')
+    parser.add_argument('--movie-output', help='Output directory for movies')
     parser.add_argument('--dry-run', action='store_true', help='If set, only print actions without moving files')
     parser.add_argument('--clean-up', action='store_true', help='If set, move non-video files to Deleted folder')
+    parser.add_argument('--config', help='Path to TOML config file')
+    parser.add_argument('--init-config', help='Generate a sample config TOML file at the given path and exit')
     args = parser.parse_args()
+
+    # Handle --init-config
+    if args.init_config:
+        sample = (
+            '# Sample video-sweep config file\n'
+            'source = "D:/Downloads"\n'
+            'series_output = "D:/Media/Series"\n'
+            'movie_output = "D:/Media/Movies"\n'
+            'clean_up = false\n'
+            'dry_run = false\n'
+        )
+        with open(args.init_config, 'w', encoding='utf-8') as f:
+            f.write(sample)
+        print(f"Sample config written to {args.init_config}")
+        sys.exit(0)
+
+    # Load config file if specified or present in current directory
+    config = {}
+    config_path = args.config or (os.path.join(os.getcwd(), "config.toml") if os.path.exists("config.toml") else None)
+    if config_path:
+        try:
+            with open(config_path, "rb") as f:
+                config = tomli.load(f)
+        except Exception as e:
+            print(f"Error loading config file: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Merge config and CLI args (CLI takes precedence)
+    def get_opt(opt, default=None):
+        return getattr(args, opt) if getattr(args, opt) is not None else config.get(opt, default)
+
+    source = get_opt('source')
+    series_output = get_opt('series_output')
+    movie_output = get_opt('movie_output')
+    dry_run = bool(get_opt('dry_run', False))
+    clean_up = bool(get_opt('clean_up', False))
+
+    if not source or not series_output or not movie_output:
+        print("Error: source, series-output, and movie-output must be specified (via CLI or config).", file=sys.stderr)
+        sys.exit(1)
 
     try:
         console = Console()
-        videos, non_videos = find_files(args.source)
+        videos, non_videos = find_files(source)
         results = []
         deleted_results = []
         from .renamer import movie_new_filename
         # Handle video files
         for video in videos:
             kind = classify_video(video)
-            output_dir = args.series_output if kind == 'series' else args.movie_output
+            output_dir = series_output if kind == 'series' else movie_output
             filename = os.path.basename(video)
             if kind == 'movie':
                 new_filename = movie_new_filename(filename)
@@ -42,17 +85,17 @@ def main():
                 'type': kind,
                 'target': target_path
             })
-            rename_and_move(video, kind, output_dir, dry_run=args.dry_run)
+            rename_and_move(video, kind, output_dir, dry_run=dry_run)
 
         # Handle non-video files (cleanup)
-        if args.clean_up:
-            deleted_dir = os.path.join(args.source, "Deleted")
+        if clean_up:
+            deleted_dir = os.path.join(source, "Deleted")
             if non_videos:
                 os.makedirs(deleted_dir, exist_ok=True)
             for file in non_videos:
                 target_path = os.path.join(deleted_dir, os.path.basename(file))
                 deleted_results.append({'file': file, 'target': target_path})
-                if args.dry_run:
+                if dry_run:
                     print(f"Would move (delete): {file} -> {target_path}")
                 else:
                     try:
@@ -64,7 +107,7 @@ def main():
                     except Exception as e:
                         print(f"Failed to move (delete) {file}: {e}")
         # Only show deleted table if --clean-up is specified
-        if args.clean_up and deleted_results:
+        if clean_up and deleted_results:
             deleted_table = Table(title="Files to be deleted...")
             deleted_table.add_column("File", style="red", no_wrap=True)
             deleted_table.add_column("Target", style="yellow")
@@ -80,15 +123,6 @@ def main():
         for r in results:
             table.add_row(os.path.basename(r['file']), r['type'], r['target'])
         console.print(table)
-
-        # Print deleted files table if any
-        if deleted_results:
-            deleted_table = Table(title="Files to be deleted...")
-            deleted_table.add_column("File", style="red", no_wrap=True)
-            deleted_table.add_column("Target", style="yellow")
-            for r in deleted_results:
-                deleted_table.add_row(os.path.basename(r['file']), r['target'])
-            console.print(deleted_table)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
