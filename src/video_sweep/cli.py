@@ -145,9 +145,7 @@ def main():
             deleted_table = Table()
             deleted_table.add_column("Files to delete", style="red", no_wrap=True)
             for r in deleted_results:
-                deleted_table.add_row(
-                    os.path.basename(os.path.normpath(r["file"]))
-                )
+                deleted_table.add_row(os.path.basename(os.path.normpath(r["file"])))
             console.print(deleted_table)
 
         # Prompt for confirmation if not dry-run

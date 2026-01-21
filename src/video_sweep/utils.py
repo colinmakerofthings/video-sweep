@@ -5,6 +5,7 @@ utils.py: Utility functions for video-sweep project.
 Includes remove_empty_parents for cleaning up empty directories after file operations.
 """
 
+
 def remove_empty_parents(path, stop_dir):
     """
     Recursively remove empty parent directories up to stop_dir (not including stop_dir).

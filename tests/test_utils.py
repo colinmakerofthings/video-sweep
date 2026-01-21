@@ -2,6 +2,7 @@ import os
 import tempfile
 from video_sweep.utils import remove_empty_parents
 
+
 def test_remove_empty_parents():
     # Create nested directories
     with tempfile.TemporaryDirectory() as root:
