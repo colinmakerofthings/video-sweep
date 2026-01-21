@@ -1,5 +1,5 @@
 import os
-from video_sweep.renamer import rename_and_move, series_new_filename
+from video_sweep.renamer import rename_and_move
 
 
 def test_rename_and_move_movie(tmp_path):
