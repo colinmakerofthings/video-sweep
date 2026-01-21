@@ -8,6 +8,9 @@ from .finder import find_files
 from .classifier import classify_video
 from .renamer import rename_and_move
 
+# For removing empty parent folders
+from .utils import remove_empty_parents
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -78,9 +81,9 @@ def main():
             else config.get(opt, default)
         )
 
-    source = get_opt("source")
-    series_output = get_opt("series_output")
-    movie_output = get_opt("movie_output")
+    source = os.path.normpath(get_opt("source"))
+    series_output = os.path.normpath(get_opt("series_output"))
+    movie_output = os.path.normpath(get_opt("movie_output"))
     dry_run = get_opt("dry_run", False)
     clean_up = get_opt("clean_up", False)
 
@@ -122,17 +125,13 @@ def main():
 
         # Prepare deleted files
         if clean_up:
-            deleted_dir = os.path.join(source, "Deleted")
-            if non_videos:
-                os.makedirs(deleted_dir, exist_ok=True)
             for file in non_videos:
-                target_path = os.path.join(deleted_dir, os.path.basename(file))
-                deleted_results.append({"file": file, "target": target_path})
+                deleted_results.append({"file": file})
         # Print table summary using rich
         table = Table()
-        table.add_column("File", style="cyan", no_wrap=True)
+        table.add_column("Files to move", style="cyan", no_wrap=True)
         table.add_column("Type", style="magenta")
-        table.add_column("Target", style="green")
+        table.add_column("Destination", style="green")
         for r in results:
             table.add_row(
                 os.path.basename(os.path.normpath(r["file"])),
@@ -143,13 +142,11 @@ def main():
 
         # Only show deleted table if --clean-up is specified
         if clean_up and deleted_results:
-            deleted_table = Table(title="Files to be deleted...")
-            deleted_table.add_column("File", style="red", no_wrap=True)
-            deleted_table.add_column("Target", style="yellow")
+            deleted_table = Table()
+            deleted_table.add_column("Files to delete", style="red", no_wrap=True)
             for r in deleted_results:
                 deleted_table.add_row(
-                    os.path.basename(os.path.normpath(r["file"])),
-                    os.path.normpath(r["target"]),
+                    os.path.basename(os.path.normpath(r["file"]))
                 )
             console.print(deleted_table)
 
@@ -164,21 +161,17 @@ def main():
             for r in results:
                 rename_and_move(r["file"], r["type"], r["output_dir"], dry_run=False)
 
-            # Move deleted files
+            # Delete files marked for deletion
             if clean_up:
                 for r in deleted_results:
                     file = r["file"]
-                    target_path = r["target"]
                     try:
-                        if os.path.exists(target_path):
-                            print(
-                                f"Warning: Deleted file '{target_path}' already exists. Skipping move."
-                            )
-                            continue
-                        os.rename(file, target_path)
-                        print(f"Moved (deleted): {file} -> {target_path}")
+                        os.remove(file)
+                        print(f"Deleted: {file}")
                     except Exception as e:
-                        print(f"Failed to move (delete) {file}: {e}")
+                        print(f"Failed to delete {file}: {e}")
+                    # Remove empty parent folders up to source dir
+                    remove_empty_parents(os.path.dirname(file), source)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

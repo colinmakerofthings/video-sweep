@@ -10,4 +10,4 @@ def test_rename_and_move(tmp_path):
     video = src / "movie.2023.mp4"
     video.write_text("")
     rename_and_move(str(video), "movie", str(tgt))
-    assert os.path.exists(os.path.join(str(tgt), "movie", "movie [2023].mp4"))
+    assert os.path.exists(os.path.join(str(tgt), "movie [2023].mp4"))
