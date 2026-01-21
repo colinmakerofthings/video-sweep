@@ -7,10 +7,14 @@ Minimal CLI tool to find, classify (movie/series), rename, and move video files 
 - Finds video files (.mp4, .mkv, .avi)
 - Classifies as movie or series
 - Renames and moves files
+  - Movies: `Title [Year].ext` to the movie output folder
+  - Series: `SeriesName SxxEyy.ext` to `series_output/SeriesName/Season N/`
+    - Example: `SeriesName (2014) - S04E01 -EpisodeTitle.mkv` → `SeriesName S04E01.mkv` in `series_output/SeriesName/Season 4/`
 - Cleans up non-video files (optional)
-- All paths provided via CLI arguments
-- Basic error handling
+- All paths provided via CLI arguments or config
+- Basic error handling and console warnings for skipped files
 - Dry run mode for safe preview
+- Console table output with color-coded type column (movies: yellow, series: blue)
 
 ## Installation
 

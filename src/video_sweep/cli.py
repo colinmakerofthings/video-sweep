@@ -102,6 +102,8 @@ def main():
         from .renamer import movie_new_filename
 
         # Handle video files
+        from .renamer import series_new_filename
+
         for video in videos:
             kind = classify_video(video)
             output_dir = series_output if kind == "series" else movie_output
@@ -110,6 +112,16 @@ def main():
                 new_filename = movie_new_filename(filename)
                 if new_filename:
                     target_path = os.path.join(output_dir, new_filename)
+                else:
+                    target_path = os.path.join(output_dir, filename)
+            elif kind == "series":
+                result = series_new_filename(filename)
+                if result:
+                    series_name, season_num, episode_code, new_filename = result
+                    season_folder = f"Season {season_num}"
+                    target_path = os.path.join(
+                        output_dir, series_name, season_folder, new_filename
+                    )
                 else:
                     target_path = os.path.join(output_dir, filename)
             else:
@@ -130,12 +142,17 @@ def main():
         # Print table summary using rich
         table = Table()
         table.add_column("Files to move", style="cyan", no_wrap=True)
-        table.add_column("Type", style="magenta")
+        table.add_column("Type")
         table.add_column("Destination", style="green")
         for r in results:
+            type_str = r["type"]
+            if type_str == "movie":
+                type_str = f"[yellow]{type_str}[/yellow]"
+            elif type_str == "series":
+                type_str = f"[blue]{type_str}[/blue]"
             table.add_row(
                 os.path.basename(os.path.normpath(r["file"])),
-                r["type"],
+                type_str,
                 os.path.normpath(r["target"]),
             )
         console.print(table)
