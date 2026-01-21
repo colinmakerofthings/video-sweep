@@ -36,7 +36,20 @@ def main():
         "--init-config",
         help="Generate a sample config TOML file at the given path and exit",
     )
+
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show the version number and exit",
+        default=argparse.SUPPRESS,
+    )
     args = parser.parse_args()
+    # Handle --version
+    if getattr(args, "version", False):
+        from . import __version__
+
+        print(f"video-sweep version {__version__}")
+        sys.exit(0)
 
     # Handle --init-config
     if args.init_config:
