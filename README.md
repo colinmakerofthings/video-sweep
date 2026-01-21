@@ -24,7 +24,7 @@ pip install video-sweep
 video-sweep --source <source_folder> --series-output <series_folder> --movie-output <movie_folder> [--clean-up] [--dry-run] [--config <file>] [--init-config <file>]
 ```
 
-- `--clean-up`: Move non-video files in the source folder to a 'Deleted' folder (shows a table of files to be deleted).
+- `--clean-up`: Permanently delete non-video files in the source folder (shows a table of files to be deleted).
 - `--dry-run`: Preview all actions without moving or deleting any files (safe to use with or without --clean-up).
 - `--config <file>`: Load options from a TOML config file. If not specified, config.toml in the current directory is used if present.
 - `--init-config <file>`: Generate a sample TOML config file at the given path and exit.
@@ -53,7 +53,7 @@ video-sweep --init-config config.toml
 # Preview all actions (no files moved or deleted)
 video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --dry-run
 
-# Move/rename video files and clean up non-video files
+# Move/rename video files and permanently delete non-video files
 video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up
 
 # Preview all actions, including cleanup (no files moved or deleted)
