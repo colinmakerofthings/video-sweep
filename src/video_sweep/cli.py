@@ -55,7 +55,7 @@ def main():
     if args.init_config:
         sample = (
             "# Sample video-sweep config file\n"
-            'source = "D:/Downloads"\n'
+            'source = "C:/Downloads"\n'
             'series_output = "D:/Media/Series"\n'
             'movie_output = "D:/Media/Movies"\n'
             "clean_up = false\n"
