@@ -203,7 +203,9 @@ def main():
 
                 # After all deletions, remove any empty folders in the source directory tree (silently)
                 def remove_all_empty_dirs(root_dir):
-                    for dirpath, dirnames, filenames in os.walk(root_dir, topdown=False):
+                    for dirpath, dirnames, filenames in os.walk(
+                        root_dir, topdown=False
+                    ):
                         # Skip the root itself
                         if dirpath == root_dir:
                             continue
