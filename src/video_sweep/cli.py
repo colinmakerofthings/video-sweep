@@ -200,6 +200,20 @@ def main():
                         print(f"Failed to delete {file}: {e}")
                     # Remove empty parent folders up to source dir
                     remove_empty_parents(os.path.dirname(file), source)
+
+                # After all deletions, remove any empty folders in the source directory tree (silently)
+                def remove_all_empty_dirs(root_dir):
+                    for dirpath, dirnames, filenames in os.walk(root_dir, topdown=False):
+                        # Skip the root itself
+                        if dirpath == root_dir:
+                            continue
+                        if not dirnames and not filenames:
+                            try:
+                                os.rmdir(dirpath)
+                            except Exception:
+                                pass
+
+                remove_all_empty_dirs(source)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
