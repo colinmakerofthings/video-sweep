@@ -11,8 +11,9 @@ MOCK_MOVIE_SUGGEST = {
 MOCK_NOT_FOUND = {"Response": "False"}
 
 
+@patch("video_sweep.omdb.get_api_key_from_config", return_value="dummykey")
 @patch("video_sweep.omdb.requests.get")
-def test_query_omdb_direct_match(mock_get):
+def test_query_omdb_direct_match(mock_get, mock_key):
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = MOCK_MOVIE
     result = query_omdb("Waterworld", "1995")
@@ -20,8 +21,9 @@ def test_query_omdb_direct_match(mock_get):
     assert result["Year"] == "1995"
 
 
+@patch("video_sweep.omdb.get_api_key_from_config", return_value="dummykey")
 @patch("video_sweep.omdb.requests.get")
-def test_query_omdb_fuzzy_match(mock_get):
+def test_query_omdb_fuzzy_match(mock_get, mock_key):
     # First call: direct fails, second: search returns list, third: id lookup
     def side_effect(*args, **kwargs):
         url = args[0]
@@ -65,8 +67,9 @@ def test_query_omdb_fuzzy_match(mock_get):
     assert result["Year"] == "2008"
 
 
+@patch("video_sweep.omdb.get_api_key_from_config", return_value="dummykey")
 @patch("video_sweep.omdb.requests.get")
-def test_query_omdb_no_match(mock_get):
+def test_query_omdb_no_match(mock_get, mock_key):
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = MOCK_NOT_FOUND
     result = query_omdb("Nonexistent Movie", "2020")
