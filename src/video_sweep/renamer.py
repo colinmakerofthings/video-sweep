@@ -1,6 +1,7 @@
 import os
 import shutil
 import re
+from .omdb import query_omdb, get_suggested_name
 
 
 def movie_new_filename(filename: str) -> str:
@@ -95,3 +96,22 @@ def series_new_filename(filename: str) -> tuple:
     series_name = series_name.strip(" .")
     new_filename = f"{series_name} {episode_code}{ext}"
     return series_name, season_num, episode_code, new_filename
+
+
+def validate_movie_name(extracted_title, extracted_year, current_name):
+    omdb_data = query_omdb(extracted_title, extracted_year)
+    if not omdb_data:
+        return False, None
+    suggested = get_suggested_name(omdb_data)
+    # Normalize OMDb suggested name to [YEAR] format for comparison
+    import re
+
+    if suggested:
+        suggested_normalized = re.sub(r" \((\d{4})\)$", r" [\1]", suggested)
+    else:
+        suggested_normalized = None
+    # Compare normalized names
+    correct = (
+        suggested_normalized and suggested_normalized.lower() == current_name.lower()
+    )
+    return correct, suggested_normalized if not correct else None
