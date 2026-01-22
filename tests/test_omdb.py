@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 from video_sweep.omdb import query_omdb, get_suggested_name
 

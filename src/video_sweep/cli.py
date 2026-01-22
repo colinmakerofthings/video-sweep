@@ -7,7 +7,6 @@ import tomli
 from .finder import find_files
 from .classifier import classify_video
 from .renamer import rename_and_move
-from video_sweep.renamer import validate_movie_name
 
 # For removing empty parent folders
 from .utils import remove_empty_parents
