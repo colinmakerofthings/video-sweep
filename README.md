@@ -36,7 +36,7 @@ video-sweep --source <source_folder> --series-output <series_folder> --movie-out
 ### Example config.toml
 
 ```toml
-source = "D:/Downloads"
+source = "C:/Downloads"
 series_output = "D:/Media/Series"
 movie_output = "D:/Media/Movies"
 clean_up = true
@@ -46,7 +46,7 @@ dry_run = false
 ## Examples
 
 ```bash
-video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies"
+video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies"
 
 # Use a config file
 video-sweep --config config.toml
@@ -55,13 +55,13 @@ video-sweep --config config.toml
 video-sweep --init-config config.toml
 
 # Preview all actions (no files moved or deleted)
-video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --dry-run
+video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --dry-run
 
 # Move/rename video files and permanently delete non-video files
-video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up
+video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up
 
 # Preview all actions, including cleanup (no files moved or deleted)
-video-sweep --source "D:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up --dry-run
+video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up --dry-run
 ```
 
 ## License
