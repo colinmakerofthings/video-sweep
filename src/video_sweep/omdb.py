@@ -1,6 +1,6 @@
+import os
 import requests
 import toml
-import os
 
 
 def get_api_key_from_config():
@@ -33,25 +33,34 @@ def query_omdb(title, year=None):
             return data
 
     # Fallback: use OMDb search endpoint and fuzzy match
-    def fuzzy_search(search_title):
+    from difflib import SequenceMatcher
+
+    def fuzzy_search(search_title, intended_title, intended_year=None):
         search_params = {"s": search_title, "apikey": api_key}
         search_response = requests.get("http://www.omdbapi.com/", params=search_params)
         if search_response.status_code == 200:
             search_data = search_response.json()
             if search_data.get("Response") == "True" and "Search" in search_data:
-                from difflib import SequenceMatcher
-
                 best_match = None
-                best_ratio = 0.0
+                best_score = 0.0
                 for item in search_data["Search"]:
                     candidate_title = item.get("Title", "")
+                    candidate_year = item.get("Year", "")
                     ratio = SequenceMatcher(
-                        None, candidate_title.lower(), search_title.lower()
+                        None, candidate_title.lower(), intended_title.lower()
                     ).ratio()
-                    if ratio > best_ratio:
+                    if intended_year:
+                        if candidate_year == str(intended_year):
+                            score = ratio + 0.2
+                        else:
+                            score = ratio - 0.2
+                    else:
+                        score = ratio
+                    if score > best_score:
                         best_match = item
-                        best_ratio = ratio
-                if best_match and best_ratio > 0.7:
+                        best_score = score
+                threshold = 0.8 if intended_year else 0.9
+                if best_match and best_score >= threshold:
                     imdb_id = best_match.get("imdbID")
                     if imdb_id:
                         id_params = {"i": imdb_id, "apikey": api_key}
@@ -65,7 +74,7 @@ def query_omdb(title, year=None):
         return None
 
     # First try with full title
-    result = fuzzy_search(title)
+    result = fuzzy_search(title, title, year)
     if result:
         return result
     # Try with simplified title (alphabetic words only)
@@ -75,13 +84,13 @@ def query_omdb(title, year=None):
     if words:
         simplified_title = " ".join(words)
         if simplified_title != title:
-            result = fuzzy_search(simplified_title)
+            result = fuzzy_search(simplified_title, simplified_title, year)
             if result:
                 return result
         # Try with progressively shorter substrings
         for i in range(len(words) - 1, 1, -1):
             short_title = " ".join(words[:i])
-            result = fuzzy_search(short_title)
+            result = fuzzy_search(short_title, short_title, year)
             if result:
                 return result
     return None
