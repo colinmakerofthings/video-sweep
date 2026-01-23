@@ -13,6 +13,10 @@ def run_cli(args, cwd=None):
 
 def test_cli_help():
     code, out, err = run_cli(['--help'])
+    # Print outputs for debugging in CI
+    print('STDOUT:', out)
+    print('STDERR:', err)
+    print('EXIT CODE:', code)
     assert code == 0
     assert 'usage' in out.lower() or 'options' in out.lower()
 
