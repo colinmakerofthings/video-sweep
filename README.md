@@ -1,6 +1,6 @@
 # video-sweep
 
-Minimal CLI tool to find, classify (movie/series), rename, and move video files to user-specified locations. Optionally, clean up non-video files.
+CLI tool to find, classify (movie/series), intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
 
 ## Features
 
