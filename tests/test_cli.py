@@ -1,7 +1,5 @@
 import subprocess
 import sys
-import pytest
-from pathlib import Path
 
 def run_cli(args, cwd=None):
     """Run the CLI with given args and return (exitcode, stdout, stderr)."""

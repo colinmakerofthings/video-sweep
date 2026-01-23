@@ -4,3 +4,4 @@ ruff
 requests
 coverage
 codecov
+pytest
