@@ -1,7 +1,7 @@
 import os
 
 
-VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi"}
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v"}
 
 
 def find_files(source_dir: str):
