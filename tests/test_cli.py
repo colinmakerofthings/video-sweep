@@ -30,10 +30,15 @@ def test_cli_dry_run(tmp_path):
     tgt.mkdir()
     video = src / "movie.2023.mp4"
     video.write_text("")
+    # Provide all required arguments
+    series = tmp_path / "series"
+    series.mkdir()
     code, out, err = run_cli(
         [
             "--source",
             str(src),
+            "--series-output",
+            str(series),
             "--movie-output",
             str(tgt),
             "--dry-run",
@@ -48,17 +53,32 @@ def test_cli_dry_run(tmp_path):
 
 
 def test_cli_no_source():
-    code, out, err = run_cli([])
-    # Should exit 0 and print an empty table (no files to move)
-    assert code == 0
-    print(f"CLI OUT: {out!r}")
-    print(f"CLI ERR: {err!r}")
-    assert out is not None, f"No output captured from CLI. STDERR: {err!r}"
-    assert (
-        "files to move" in out.lower()
-    ), f"Expected 'files to move' in output, got: {out!r}"
-    # Table should have no video files listed
-    assert "| movie" not in out.lower(), f"Unexpected movie row in output: {out!r}"
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src = tmpdir
+        series = tmpdir  # Not used, but required
+        tgt = tmpdir
+        code, out, err = run_cli(
+            [
+                "--source",
+                src,
+                "--series-output",
+                series,
+                "--movie-output",
+                tgt,
+            ]
+        )
+        # Should exit 0 and print an empty table (no files to move)
+        assert code == 0
+        print(f"CLI OUT: {out!r}")
+        print(f"CLI ERR: {err!r}")
+        assert out is not None, f"No output captured from CLI. STDERR: {err!r}"
+        assert (
+            "files to move" in out.lower()
+        ), f"Expected 'files to move' in output, got: {out!r}"
+        # Table should have no video files listed
+        assert "| movie" not in out.lower(), f"Unexpected movie row in output: {out!r}"
 
 
 def test_cli_init_config(tmp_path):
