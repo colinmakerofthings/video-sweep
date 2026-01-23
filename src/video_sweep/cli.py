@@ -239,9 +239,17 @@ def main():
             for r in results:
                 # Pass OMDb-suggested name if available and kind is movie
                 if r["type"] == "movie" and r.get("suggested"):
-                    rename_and_move(r["file"], r["type"], r["output_dir"], dry_run=False, omdb_suggested_name=r["suggested"])
+                    rename_and_move(
+                        r["file"],
+                        r["type"],
+                        r["output_dir"],
+                        dry_run=False,
+                        omdb_suggested_name=r["suggested"],
+                    )
                 else:
-                    rename_and_move(r["file"], r["type"], r["output_dir"], dry_run=False)
+                    rename_and_move(
+                        r["file"], r["type"], r["output_dir"], dry_run=False
+                    )
 
             # Delete files marked for deletion
             if clean_up:

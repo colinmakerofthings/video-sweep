@@ -1,4 +1,3 @@
-
 import os
 import shutil
 import re
@@ -12,7 +11,7 @@ def sanitize_filename(name: str) -> str:
     """
     # Windows forbidden chars: < > : " / \ | ? *
     # Do NOT remove . or -
-    return re.sub(r'[<>:"/\\|?*]', '', name)
+    return re.sub(r'[<>:"/\\|?*]', "", name)
 
 
 def movie_new_filename(filename: str) -> str:
@@ -45,7 +44,11 @@ def movie_new_filename(filename: str) -> str:
 
 
 def rename_and_move(
-    filepath: str, kind: str, target_dir: str, dry_run: bool = False, omdb_suggested_name: str = None
+    filepath: str,
+    kind: str,
+    target_dir: str,
+    dry_run: bool = False,
+    omdb_suggested_name: str = None,
 ) -> None:
     """Rename and move the video file to the target directory. If dry_run, only print the action.
     If omdb_suggested_name is provided (and kind==movie), use it as the new filename."""
@@ -101,6 +104,8 @@ def rename_and_move(
         print(f"Moved: {filepath} -> {target_path}")
     except Exception as e:
         print(f"Failed to move {filepath}: {e}")
+
+
 def series_new_filename(filename: str) -> tuple:
     """
     Generate new filename and output path for a series episode.
