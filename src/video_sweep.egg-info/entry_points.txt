@@ -1,2 +1,0 @@
-[console_scripts]
-video-sweep = video_sweep.cli:main
