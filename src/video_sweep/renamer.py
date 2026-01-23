@@ -1,18 +1,9 @@
-def sanitize_filename(name: str) -> str:
-    """
-    Remove or replace characters not allowed in Windows filenames.
-    Periods (.) and dashes (-) are allowed and preserved.
-    """
-    # Windows forbidden chars: < > : " / \ | ? *
-    # Do NOT remove . or -
-    return re.sub(r'[<>:"/\\|?*]', '', name)
-
-
 
 import os
 import shutil
 import re
 from .omdb import query_omdb, get_suggested_name
+
 
 def sanitize_filename(name: str) -> str:
     """
