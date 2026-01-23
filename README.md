@@ -41,6 +41,9 @@ series_output = "D:/Media/Series"
 movie_output = "D:/Media/Movies"
 clean_up = true
 dry_run = false
+
+[omdb]
+api_key = "your_api_key_here"
 ```
 
 ## Examples
@@ -63,6 +66,29 @@ video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-ou
 # Preview all actions, including cleanup (no files moved or deleted)
 video-sweep --source "C:/Downloads" --series-output "D:/Media/Series" --movie-output "D:/Media/Movies" --clean-up --dry-run
 ```
+
+## Movie Name Validation
+
+After renaming, the tool automatically validates movie names using the OMDb API. If a suggested name is found, the file will be moved/renamed to match the OMDb format. Invalid names are highlighted in red in the results table.
+
+**OMDb API Key:**
+Set the OMDB_API_KEY environment variable to enable validation.
+
+| Current Name         | Valid | Suggested Name          |
+|--------------------- |-------|-------------------------|
+| Example (2020)       | Yes   |                         |
+| WrongName (2019)     | No    | Correct Title (2019)    |
+
+## OMDb API Key Setup
+
+To enable movie name validation, add your OMDb API key to the `[omdb]` section of `config.toml`:
+
+```toml
+[omdb]
+api_key = "your_api_key_here"
+```
+
+If the API key is not set, validation will be skipped automatically.
 
 ## License
 

@@ -123,10 +123,49 @@ def main():
             filename = os.path.basename(video)
             if kind == "movie":
                 new_filename = movie_new_filename(filename)
-                if new_filename:
-                    target_path = os.path.join(output_dir, new_filename)
+                # Extract title and year from new_filename for validation
+                import re
+
+                title_year_match = re.match(
+                    r"(.+?) \[(\d{4})\]", os.path.splitext(new_filename or filename)[0]
+                )
+                if title_year_match:
+                    extracted_title = title_year_match.group(1)
+                    extracted_year = title_year_match.group(2)
                 else:
-                    target_path = os.path.join(output_dir, filename)
+                    extracted_title = None
+                    extracted_year = None
+                # Validate movie name using OMDb
+                valid = None
+                suggested = None
+                if extracted_title and extracted_year:
+                    from .renamer import validate_movie_name
+
+                    valid, suggested = validate_movie_name(
+                        extracted_title,
+                        extracted_year,
+                        f"{extracted_title} [{extracted_year}]",
+                    )
+                    # If OMDb suggested name uses (YEAR), convert to [YEAR]
+                    if suggested:
+                        import re
+
+                        # Replace ' (YEAR)' at end with ' [YEAR]'
+                        suggested = re.sub(r" \((\d{4})\)$", r" [\1]", suggested)
+                # Use suggested name for move if available
+                ext = os.path.splitext(filename)[1]
+                if suggested:
+                    target_filename = f"{suggested}{ext}"
+                elif new_filename:
+                    target_filename = new_filename
+                else:
+                    target_filename = filename
+                target_path = os.path.join(output_dir, target_filename)
+                # Store validation info
+                validation = {
+                    "valid": "Yes" if valid else "No" if valid is not None else "-",
+                    "suggested": suggested or "",
+                }
             elif kind == "series":
                 result = series_new_filename(filename)
                 if result:
@@ -137,14 +176,18 @@ def main():
                     )
                 else:
                     target_path = os.path.join(output_dir, filename)
+                validation = {"valid": "-", "suggested": ""}
             else:
                 target_path = os.path.join(output_dir, filename)
+                validation = {"valid": "-", "suggested": ""}
             results.append(
                 {
                     "file": video,
                     "type": kind,
                     "target": target_path,
                     "output_dir": output_dir,
+                    "valid": validation["valid"],
+                    "suggested": validation["suggested"],
                 }
             )
 
@@ -157,16 +200,23 @@ def main():
         table.add_column("Files to move", style="cyan", no_wrap=True)
         table.add_column("Type")
         table.add_column("Destination", style="green")
+        table.add_column("Valid", style="magenta")
+        table.add_column("Suggested Name", style="yellow")
         for r in results:
             type_str = r["type"]
             if type_str == "movie":
                 type_str = f"[yellow]{type_str}[/yellow]"
             elif type_str == "series":
                 type_str = f"[blue]{type_str}[/blue]"
+            valid_str = r["valid"]
+            if valid_str == "No":
+                valid_str = f"[red]{valid_str}[/red]"
             table.add_row(
                 os.path.basename(os.path.normpath(r["file"])),
                 type_str,
                 os.path.normpath(r["target"]),
+                valid_str,
+                r["suggested"],
             )
         console.print(table)
 
@@ -216,6 +266,44 @@ def main():
                                 pass
 
                 remove_all_empty_dirs(source)
+
+        # Validation table for movie names
+        def print_validation_table(files):
+            print(f"{'Current Name':40} | {'Valid':5} | {'Suggested Name':40}")
+            print("-" * 90)
+            for f in files:
+                extracted_title, extracted_year = extract_title_year(
+                    f
+                )  # Assume this exists
+                correct, suggested = validate_movie_name(
+                    extracted_title, extracted_year, f
+                )
+                valid_str = "Yes" if correct else "No"
+                suggested_str = suggested if suggested else ""
+                print(f"{f:40} | {valid_str:5} | {suggested_str:40}")
+
+        if results:
+            print_validation_table([r["file"] for r in results])
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def extract_title_year(filename):
+    """
+    Extract title and year from a filename using the same logic as movie_new_filename.
+    Returns (title, year) or (None, None) if not found.
+    """
+    import re
+
+    name = os.path.splitext(os.path.basename(filename))[0]
+    name = name.replace("[", "").replace("]", "")
+    match = re.search(r"(\d{4})", name)
+    if not match:
+        return None, None
+    year = match.group(1)
+    title = name[: match.start()].replace(".", " ").strip()
+    title = title.strip(" .")
+    title = re.sub(r"\s+", " ", title)
+    return title, year
