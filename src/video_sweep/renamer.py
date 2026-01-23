@@ -7,6 +7,7 @@ def sanitize_filename(name: str) -> str:
     # Do NOT remove . or -
     return re.sub(r'[<>:"/\\|?*]', '', name)
 
+
 import os
 import shutil
 import re
