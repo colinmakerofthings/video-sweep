@@ -6,7 +6,7 @@ from rich.table import Table
 import tomli
 from .finder import find_files
 from .classifier import classify_video
-from .renamer import rename_and_move
+from .renamer import rename_and_move, validate_movie_name
 
 # For removing empty parent folders
 from .utils import remove_empty_parents
@@ -163,8 +163,6 @@ def main():
                 valid = None
                 suggested = None
                 if extracted_title and extracted_year:
-                    from .renamer import validate_movie_name
-
                     valid, suggested = validate_movie_name(
                         extracted_title,
                         extracted_year,
