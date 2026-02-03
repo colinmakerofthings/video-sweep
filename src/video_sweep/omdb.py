@@ -4,6 +4,10 @@ import toml
 
 
 def get_api_key_from_config():
+    # Check environment variable first
+    env_key = os.environ.get("OMDB_API_KEY")
+    if env_key:
+        return env_key
     config_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "..", "config.toml"
     )
