@@ -6,6 +6,7 @@ CLI tool to find, classify, intelligently rename, and move video files to user-s
 
 - Finds video files (.mp4, .mkv, .avi)
 - Classifies as movie or series
+- Name validation using OMDb API for accurate title and year matching
 - Renames and moves files
   - Movies: `Title [Year].ext` to the movie output folder
   - Series: `SeriesName SxxEyy.ext` to `series_output/SeriesName/Season N/`
