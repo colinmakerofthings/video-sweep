@@ -10,7 +10,8 @@ requires-python = ">=3.8"
 dependencies = [
 	"tomli; python_version < '3.11'",
 	"requests",
-	"toml"
+	"toml",
+	"rich"
 ]
 
 [project.scripts]
