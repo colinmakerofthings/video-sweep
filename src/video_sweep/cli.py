@@ -13,6 +13,11 @@ from .utils import remove_empty_parents
 
 
 def main():
+    # Check if OMDb API key is present
+    from .omdb import get_api_key_from_config
+
+    omdb_api_key = get_api_key_from_config()
+    show_omdb_columns = bool(omdb_api_key)
     parser = argparse.ArgumentParser(
         description="Find, classify, rename, and move video files."
     )
@@ -106,28 +111,11 @@ def main():
     clean_up = get_opt("clean_up", False)
 
     if not source or not series_output or not movie_output:
-        # Print a plain text table if in test/subprocess environment
-        if os.environ.get("VIDEO_SWEEP_PLAIN") or not sys.stdout.isatty():
-            print("Files to move | Type | Destination | Valid | Suggested Name")
-            print("-" * 60)
-            # No rows, just header
-        else:
-            import io
-
-            rich_buffer = io.StringIO()
-            console = Console(file=rich_buffer, force_terminal=True, color_system=None)
-            table = Table()
-            table.add_column("Files to move", style="cyan", no_wrap=True)
-            table.add_column("Type")
-            table.add_column("Destination", style="green")
-            table.add_column("Valid", style="magenta")
-            table.add_column("Suggested Name", style="yellow")
-            # No rows, just header
-            console.print(table)
-            rich_buffer.flush()
-            print(rich_buffer.getvalue(), flush=True)
-            sys.stdout.flush()
-        sys.exit(0)
+        print(
+            "Error: --source, --series-output, and --movie-output are required.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Normalize paths after validation
     source = os.path.normpath(source)
@@ -157,48 +145,55 @@ def main():
             filename = os.path.basename(video)
             if kind == "movie":
                 new_filename = movie_new_filename(filename)
-                # Extract title and year from new_filename for validation
-                import re
+                if show_omdb_columns:
+                    # Extract title and year from new_filename for validation
+                    import re
 
-                title_year_match = re.match(
-                    r"(.+?) \[(\d{4})\]", os.path.splitext(new_filename or filename)[0]
-                )
-                if title_year_match:
-                    extracted_title = title_year_match.group(1)
-                    extracted_year = title_year_match.group(2)
-                else:
-                    extracted_title = None
-                    extracted_year = None
-                # Validate movie name using OMDb
-                valid = None
-                suggested = None
-                if extracted_title and extracted_year:
-                    valid, suggested = validate_movie_name(
-                        extracted_title,
-                        extracted_year,
-                        f"{extracted_title} [{extracted_year}]",
+                    title_year_match = re.match(
+                        r"(.+?) \[(\d{4})\]",
+                        os.path.splitext(new_filename or filename)[0],
                     )
-                    # If OMDb suggested name uses (YEAR), convert to [YEAR]
-                    if suggested:
-                        import re
+                    if title_year_match:
+                        extracted_title = title_year_match.group(1)
+                        extracted_year = title_year_match.group(2)
+                    else:
+                        extracted_title = None
+                        extracted_year = None
+                    # Validate movie name using OMDb
+                    valid = None
+                    suggested = None
+                    if extracted_title and extracted_year:
+                        valid, suggested = validate_movie_name(
+                            extracted_title,
+                            extracted_year,
+                            f"{extracted_title} [{extracted_year}]",
+                        )
+                        # If OMDb suggested name uses (YEAR), convert to [YEAR]
+                        if suggested:
+                            import re
 
-                        # Replace ' (YEAR)' at end with ' [YEAR]'
-                        suggested = re.sub(r" \((\d{4})\)$", r" [\1]", suggested)
-                # Use suggested name for move if available
-                ext = os.path.splitext(filename)[1]
-                if suggested:
-                    target_filename = f"{suggested}{ext}"
-                elif new_filename:
-                    target_filename = new_filename
+                            # Replace ' (YEAR)' at end with ' [YEAR]'
+                            suggested = re.sub(r" \((\d{4})\)$", r" [\1]", suggested)
+                    # Use suggested name for move if available
+                    ext = os.path.splitext(filename)[1]
+                    if suggested:
+                        target_filename = f"{suggested}{ext}"
+                    elif new_filename:
+                        target_filename = new_filename
+                    else:
+                        target_filename = filename
+                    target_path = os.path.join(output_dir, target_filename)
+                    # Store validation info
+                    validation = {
+                        "valid": "Yes" if valid else "No" if valid is not None else "-",
+                        "suggested": suggested or "",
+                    }
                 else:
-                    target_filename = filename
-                target_path = os.path.join(output_dir, target_filename)
-                # Store validation info
-                validation = {
-                    "valid": "Yes" if valid else "No" if valid is not None else "-",
-                    "suggested": suggested or "",
-                }
-            elif kind == "series":
+                    # No OMDb columns, skip validation
+                    target_path = os.path.join(output_dir, new_filename or filename)
+                    validation = {}
+
+            if kind == "series":
                 result = series_new_filename(filename)
                 if result:
                     series_name, season_num, episode_code, new_filename = result
@@ -209,19 +204,19 @@ def main():
                 else:
                     target_path = os.path.join(output_dir, filename)
                 validation = {"valid": "-", "suggested": ""}
-            else:
+            elif kind not in ("movie", "series"):
                 target_path = os.path.join(output_dir, filename)
                 validation = {"valid": "-", "suggested": ""}
-            results.append(
-                {
-                    "file": video,
-                    "type": kind,
-                    "target": target_path,
-                    "output_dir": output_dir,
-                    "valid": validation["valid"],
-                    "suggested": validation["suggested"],
-                }
-            )
+            result_entry = {
+                "file": video,
+                "type": kind,
+                "target": target_path,
+                "output_dir": output_dir,
+            }
+            if show_omdb_columns:
+                result_entry["valid"] = validation.get("valid", "")
+                result_entry["suggested"] = validation.get("suggested", "")
+            results.append(result_entry)
 
         # Prepare deleted files
         if clean_up:
@@ -229,39 +224,49 @@ def main():
                 deleted_results.append({"file": file})
         # Print table summary using rich
         if use_plain:
-            print("Files to move | Type | Destination | Valid | Suggested Name")
-            print("-" * 60)
+            header = "Files to move | Type | Destination"
+            if show_omdb_columns:
+                header += " | Valid | Suggested Name"
+            print(header)
+            print("-" * len(header))
             for r in results:
-                print(
-                    f"{os.path.basename(os.path.normpath(r['file']))} | {r['type']} | {os.path.normpath(r['target'])} | {r['valid']} | {r['suggested']}"
-                )
+                row = f"{os.path.basename(os.path.normpath(r['file']))} | {r['type']} | {os.path.normpath(r['target'])}"
+                if show_omdb_columns:
+                    row += f" | {r.get('valid', '')} | {r.get('suggested', '')}"
+                print(row)
         else:
             table = Table()
             table.add_column("Files to move", style="cyan", no_wrap=True)
             table.add_column("Type")
             table.add_column("Destination", style="green")
-            table.add_column("Valid", style="magenta")
-            table.add_column("Suggested Name", style="yellow")
+            if show_omdb_columns:
+                table.add_column("Valid", style="magenta")
+                table.add_column("Suggested Name", style="yellow")
             for r in results:
                 type_str = r["type"]
                 if type_str == "movie":
                     type_str = f"[yellow]{type_str}[/yellow]"
                 elif type_str == "series":
                     type_str = f"[blue]{type_str}[/blue]"
-                valid_str = r["valid"]
-                if valid_str == "No":
-                    valid_str = f"[red]{valid_str}[/red]"
-                table.add_row(
+                row_args = [
                     os.path.basename(os.path.normpath(r["file"])),
                     type_str,
                     os.path.normpath(r["target"]),
-                    valid_str,
-                    r["suggested"],
-                )
+                ]
+                if show_omdb_columns:
+                    valid_str = r.get("valid", "")
+                    if valid_str == "No":
+                        valid_str = f"[red]{valid_str}[/red]"
+                    row_args.append(valid_str)
+                    row_args.append(r.get("suggested", ""))
+                table.add_row(*row_args)
             console.print(table)
             rich_buffer.flush()
             print(rich_buffer.getvalue(), flush=True)
             sys.stdout.flush()
+            # Clear buffer after printing
+            rich_buffer.truncate(0)
+            rich_buffer.seek(0)
 
         # Only show deleted table if --clean-up is specified
         if clean_up and deleted_results:
@@ -279,6 +284,9 @@ def main():
                 rich_buffer.flush()
                 print(rich_buffer.getvalue(), flush=True)
                 sys.stdout.flush()
+                # Clear buffer after printing
+                rich_buffer.truncate(0)
+                rich_buffer.seek(0)
 
         # Prompt for confirmation if not dry-run
         if not dry_run and (results or (clean_up and deleted_results)):
@@ -345,9 +353,6 @@ def main():
                 valid_str = "Yes" if correct else "No"
                 suggested_str = suggested if suggested else ""
                 print(f"{f:40} | {valid_str:5} | {suggested_str:40}")
-
-        if results:
-            print_validation_table([r["file"] for r in results])
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
