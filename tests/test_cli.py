@@ -89,6 +89,26 @@ def test_cli_init_config(tmp_path):
     assert "Sample config written" in out
 
 
+def test_cli_init_config_auto_adds_toml_extension(tmp_path):
+    """Test that .toml extension is automatically added if missing."""
+    config_path = tmp_path / "myconfig"
+    code, out, err = run_cli(["--init-config", str(config_path)])
+    assert code == 0
+    # Should create myconfig.toml, not myconfig
+    expected_path = tmp_path / "myconfig.toml"
+    assert expected_path.exists()
+    assert "Sample config written" in out
+    assert "myconfig.toml" in out
+
+
+def test_cli_no_arguments():
+    """Test that running with no arguments exits gracefully."""
+    code, out, err = run_cli([])
+    assert code == 0
+    # Should print empty table header
+    assert "files to move" in out.lower() or "Type" in out
+
+
 def test_cli_version():
     code, out, err = run_cli(["--version"])
     assert code == 0
