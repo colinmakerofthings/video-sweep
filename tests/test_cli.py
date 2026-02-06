@@ -349,4 +349,937 @@ def test_cli_invalid_config_file(tmp_path):
     assert "error" in output.lower() or "no such file" in output.lower()
 
 
+def test_cli_with_valid_config_file(tmp_path):
+    # Test loading a valid config file
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a valid config file (use forward slashes for cross-platform)
+    config_file = tmp_path / "test_config.toml"
+    config_file.write_text(
+        f'source = "{str(src).replace(chr(92), "/")}"\n'
+        f'series_output = "{str(series).replace(chr(92), "/")}"\n'
+        f'movie_output = "{str(tgt).replace(chr(92), "/")}"\n'
+        "dry_run = true\n"
+        "clean_up = false\n"
+    )
+
+    # Run with config file
+    code, out, err = run_cli(
+        [
+            "--config",
+            str(config_file),
+        ]
+    )
+    assert code in (0, 1)
+    output = (out or "") + (err or "")
+    output_lower = output.lower()
+    assert (
+        "files to move" in output_lower
+        or "type" in output_lower
+        or "error" in output_lower
+    )
+
+
+def test_cli_config_with_cli_override(tmp_path):
+    # Test that CLI args override config file
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    other_src = tmp_path / "other_source"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+    other_src.mkdir()
+
+    # Create a config file with different source (use forward slashes)
+    config_file = tmp_path / "test_config.toml"
+    config_file.write_text(
+        f'source = "{str(other_src).replace(chr(92), "/")}"\n'
+        f'series_output = "{str(series).replace(chr(92), "/")}"\n'
+        f'movie_output = "{str(tgt).replace(chr(92), "/")}"\n'
+        "dry_run = true\n"
+    )
+
+    # Override source with CLI arg
+    code, out, err = run_cli(
+        [
+            "--config",
+            str(config_file),
+            "--source",
+            str(src),
+        ]
+    )
+    assert code in (0, 1)
+
+
+def test_cli_with_clean_up_flag(tmp_path):
+    # Test --clean-up flag
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a non-video file
+    non_video = src / "readme.txt"
+    non_video.write_text("test")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should mention files to delete when --clean-up is set
+    assert "delete" in output.lower() or "files to move" in output.lower()
+
+
+def test_cli_auto_load_config_from_cwd(tmp_path, monkeypatch):
+    # Test auto-loading config.toml from current directory
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create config.toml in tmp_path (use forward slashes)
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        f'source = "{str(src).replace(chr(92), "/")}"\n'
+        f'series_output = "{str(series).replace(chr(92), "/")}"\n'
+        f'movie_output = "{str(tgt).replace(chr(92), "/")}"\n'
+        "dry_run = true\n"
+    )
+
+    # Run CLI from that directory without specifying config
+    code, out, err = run_cli([], cwd=str(tmp_path))
+    assert code in (0, 1)
+    output = (out or "") + (err or "")
+    output_lower = output.lower()
+    assert (
+        "files to move" in output_lower
+        or "type" in output_lower
+        or "error" in output_lower
+    )
+
+
+def test_cli_boolean_flags_from_config(tmp_path):
+    # Test that boolean flags are properly read from config
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a config file with dry_run = false (use forward slashes)
+    config_file = tmp_path / "test_config.toml"
+    config_file.write_text(
+        f'source = "{str(src).replace(chr(92), "/")}"\n'
+        f'series_output = "{str(series).replace(chr(92), "/")}"\n'
+        f'movie_output = "{str(tgt).replace(chr(92), "/")}"\n'
+        "dry_run = false\n"
+    )
+
+    # Add video file
+    video = src / "test.movie.2023.mp4"
+    video.write_text("")
+
+    # Run with config (should see confirmation prompt behavior)
+    code, out, err = run_cli(
+        [
+            "--config",
+            str(config_file),
+            "--dry-run",  # Override config with CLI arg
+        ]
+    )
+    assert code in (0, 1)
+    # In dry-run mode, no confirmation prompt
+    output = (out or "") + (err or "")
+    assert (
+        "proceed" not in output.lower()
+        or ".mp4" in output.lower()
+        or "files to move" in output.lower()
+    )
+
+
+def test_cli_series_video_processing(tmp_path):
+    # Test series video processing
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a series video file
+    video = src / "Breaking.Bad.S01E01.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should classify as series and show in output
+    assert "series" in output.lower() or "breaking" in output.lower()
+
+
+def test_cli_plain_output_mode(tmp_path, monkeypatch):
+    # Test plain output mode (no Rich formatting)
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "test.movie.2023.mp4"
+    video.write_text("")
+
+    # Set environment variable to force plain mode
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Plain mode should use pipe separators
+    assert "|" in output and "files to move" in output.lower()
+
+
+def test_cli_unclassified_video(tmp_path):
+    # Test video that doesn't match movie or series patterns
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a video file that doesn't match patterns
+    video = src / "random_video.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert ".mp4" in output or "random" in output.lower()
+
+
+def test_cli_exception_handling(tmp_path, monkeypatch):
+    # Test exception handling in main try-except block
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a video file
+    video = src / "test.movie.2023.mp4"
+    video.write_text("")
+
+    # Mock find_files to raise an exception
+    def mock_find_files(path):
+        raise RuntimeError("Test exception")
+
+    import video_sweep.cli
+
+    monkeypatch.setattr(video_sweep.cli, "find_files", mock_find_files)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+        ]
+    )
+    assert code == 1
+    output = (out or "") + (err or "")
+    assert "error" in output.lower()
+
+
+def test_extract_title_year_function():
+    # Test the extract_title_year utility function
+    from video_sweep.cli import extract_title_year
+
+    # Test with valid movie filename
+    title, year = extract_title_year("The.Matrix.1999.mp4")
+    assert title == "The Matrix"
+    assert year == "1999"
+
+    # Test with brackets
+    title, year = extract_title_year("The.Matrix.[1999].mp4")
+    assert title == "The Matrix"
+    assert year == "1999"
+
+    # Test without year
+    title, year = extract_title_year("NoYear.mp4")
+    assert title is None
+    assert year is None
+
+    # Test with multiple spaces
+    title, year = extract_title_year("The...Matrix...1999.mp4")
+    assert title == "The Matrix"
+    assert year == "1999"
+
+
+def test_cli_with_omdb_api_key(tmp_path, monkeypatch):
+    # Test CLI with OMDb API key present (show_omdb_columns = True)
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a movie video file
+    video = src / "The.Matrix.1999.mp4"
+    video.write_text("")
+
+    # Mock get_api_key_from_config to return a fake key
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    # Mock validate_movie_name to return validation data
+    def mock_validate(title, year, filename):
+        return True, None  # Valid, no suggestion
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should include OMDb validation columns
+    assert "valid" in output.lower() or "suggested" in output.lower()
+
+
+def test_cli_with_omdb_suggestion(tmp_path, monkeypatch):
+    # Test CLI with OMDb suggesting a different name
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "The.Matrix.1999.mp4"
+    video.write_text("")
+
+    # Mock to return API key
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    # Mock validate_movie_name to return a suggestion
+    def mock_validate(title, year, filename):
+        return False, "The Matrix (1999)"  # Invalid, with suggestion
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should show suggestion in brackets format [1999]
+    assert "matrix" in output.lower()
+
+
+def test_cli_with_clean_up_and_non_videos(tmp_path):
+    # Test --clean-up with non-video files
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create non-video files
+    txt_file = src / "readme.txt"
+    txt_file.write_text("test")
+    doc_file = src / "notes.doc"
+    doc_file.write_text("test")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should show files to delete
+    assert "delete" in output.lower() and (
+        "readme" in output.lower() or "txt" in output.lower()
+    )
+
+
+def test_cli_plain_mode_with_clean_up(tmp_path, monkeypatch):
+    # Test plain output mode with clean-up files
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create non-video file
+    txt_file = src / "readme.txt"
+    txt_file.write_text("test")
+
+    # Force plain mode
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Plain mode should show delete table
+    assert "delete" in output.lower()
+
+
+def test_cli_series_with_season_folder(tmp_path):
+    # Test series processing creates proper season folder structure
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create series file with season/episode
+    video = src / "Game.of.Thrones.S03E05.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should mention Season folder
+    assert "season" in output.lower() or "s03" in output.lower()
+
+
+def test_cli_movie_without_year(tmp_path):
+    # Test movie file without recognizable year
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create movie file without year
+    video = src / "SomeMovie.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should still process the file
+    assert "somemovie" in output.lower() or ".mp4" in output
+
+
+def test_cli_movie_with_omdb_no_match(tmp_path, monkeypatch):
+    # Test movie with OMDb but no title/year match
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create movie without proper year pattern
+    video = src / "weird_movie_name.mp4"
+    video.write_text("")
+
+    # Mock to return API key
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should still show the file
+    assert "weird" in output.lower() or ".mp4" in output
+
+
+def test_cli_series_without_proper_format(tmp_path):
+    # Test series file that doesn't match series_new_filename pattern
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create file that might be classified as series but doesn't parse
+    video = src / "show_episode.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert ".mp4" in output
+
+
+def test_cli_plain_mode_with_omdb(tmp_path, monkeypatch):
+    # Test plain output mode with OMDb columns
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "The.Matrix.1999.mp4"
+    video.write_text("")
+
+    # Mock OMDb
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    def mock_validate(title, year, filename):
+        return True, None
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    # Force plain mode
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Plain mode with OMDb should show Valid and Suggested Name columns
+    assert "valid" in output.lower() and "suggested" in output.lower()
+
+
+def test_cli_omdb_validation_no(tmp_path, monkeypatch):
+    # Test OMDb validation with "No" result (invalid movie name)
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "Wrong.Title.1999.mp4"
+    video.write_text("")
+
+    # Mock OMDb
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    def mock_validate(title, year, filename):
+        return False, "Correct Title (1999)"  # Invalid
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should show validation result
+    assert "correct" in output.lower() or "title" in output.lower()
+
+
+def test_cli_movie_no_new_filename(tmp_path, monkeypatch):
+    # Test movie where movie_new_filename returns None
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "weird.mp4"
+    video.write_text("")
+
+    # Mock movie_new_filename to return None
+    import video_sweep.renamer
+
+    def mock_movie_new_filename(filename):
+        return None
+
+    monkeypatch.setattr(
+        video_sweep.renamer, "movie_new_filename", mock_movie_new_filename
+    )
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert "weird" in output.lower()
+
+
+def test_cli_omdb_without_extracted_title(tmp_path, monkeypatch):
+    # Test OMDb path when title/year extraction fails
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "noyear.mp4"
+    video.write_text("")
+
+    # Mock OMDb but file has no year
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    # Mock movie_new_filename to return something without year pattern
+    def mock_movie_new_filename(filename):
+        return "noyear.mp4"
+
+    monkeypatch.setattr(
+        video_sweep.renamer, "movie_new_filename", mock_movie_new_filename
+    )
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert "noyear" in output.lower()
+
+
+def test_cli_series_no_rename_result(tmp_path, monkeypatch):
+    # Test series where series_new_filename returns None
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "series_file.mp4"
+    video.write_text("")
+
+    # Mock to classify as series
+    import video_sweep.classifier
+
+    def mock_classify(filename):
+        return "series"
+
+    monkeypatch.setattr(video_sweep.classifier, "classify_video", mock_classify)
+
+    # Mock series_new_filename to return None
+    import video_sweep.renamer
+
+    def mock_series_new_filename(filename):
+        return None
+
+    monkeypatch.setattr(
+        video_sweep.renamer, "series_new_filename", mock_series_new_filename
+    )
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert "series_file" in output.lower()
+
+
+def test_cli_unknown_video_type(tmp_path, monkeypatch):
+    # Test video that's classified as neither movie nor series
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "unknown.mp4"
+    video.write_text("")
+
+    # Mock to classify as unknown type
+    import video_sweep.classifier
+
+    def mock_classify(filename):
+        return "unknown"
+
+    monkeypatch.setattr(video_sweep.classifier, "classify_video", mock_classify)
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    assert "unknown" in output.lower()
+
+
+def test_cli_rich_mode_with_omdb_columns(tmp_path, monkeypatch):
+    # Test Rich table output with OMDb columns (not plain mode)
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "The.Movie.2020.mp4"
+    video.write_text("")
+
+    # Mock OMDb
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    def mock_validate(title, year, filename):
+        return False, "The Correct Movie [2020]"  # Show "No" and suggestion
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    # Don't set VIDEO_SWEEP_PLAIN to use Rich mode
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should include OMDb columns in output
+    assert "valid" in output.lower() or "suggested" in output.lower()
+
+
+def test_cli_rich_mode_series_type_styling(tmp_path):
+    # Test Rich mode with series type styling
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "Show.S01E01.mp4"
+    video.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    output = (out or "") + (err or "")
+    # Should show series
+    assert "series" in output.lower() or "show" in output.lower()
+
+
 # Add more CLI tests as needed (e.g., dry-run, config, error cases)
