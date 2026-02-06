@@ -37,3 +37,18 @@ def test_find_files_empty(tmp_path):
     videos, non_videos = find_files(str(tmp_path))
     assert videos == []
     assert non_videos == []
+
+
+def test_find_files_ignores_macos_metadata(tmp_path):
+    # Create normal files
+    (tmp_path / "movie.mp4").write_text("")
+    (tmp_path / "doc.txt").write_text("")
+    # Create macOS metadata files that should be ignored
+    (tmp_path / "._movie.mp4").write_text("")
+    (tmp_path / "._doc.txt").write_text("")
+    videos, non_videos = find_files(str(tmp_path))
+    assert len(videos) == 1
+    assert len(non_videos) == 1
+    all_files = videos + non_videos
+    assert all(not f.split("/")[-1].startswith("._") for f in all_files)
+    assert all(not f.split("\\")[-1].startswith("._") for f in all_files)

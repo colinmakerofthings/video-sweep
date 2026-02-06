@@ -33,3 +33,16 @@ def test_find_videos_mixed_case(tmp_path):
     (tmp_path / "show.MkV").write_text("")
     found = find_videos(str(tmp_path))
     assert any(f.endswith(".MP4") or f.endswith(".MkV") for f in found)
+
+
+def test_find_videos_ignores_macos_metadata(tmp_path):
+    # Create normal video files
+    (tmp_path / "movie.mp4").write_text("")
+    (tmp_path / "show.mkv").write_text("")
+    # Create macOS metadata files that should be ignored
+    (tmp_path / "._movie.mp4").write_text("")
+    (tmp_path / "._show.mkv").write_text("")
+    found = find_videos(str(tmp_path))
+    assert len(found) == 2
+    assert all(not f.split("/")[-1].startswith("._") for f in found)
+    assert all(not f.split("\\")[-1].startswith("._") for f in found)
