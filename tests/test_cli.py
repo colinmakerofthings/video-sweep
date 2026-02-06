@@ -183,7 +183,7 @@ def test_path_normalization_direct(tmp_path, monkeypatch, capsys):
     src.mkdir()
     series.mkdir()
     movies.mkdir()
-    
+
     # Create a dummy video file so we get past the validation and into the processing code
     video_file = src / "test.movie.2023.mp4"
     video_file.write_text("")
@@ -204,10 +204,12 @@ def test_path_normalization_direct(tmp_path, monkeypatch, capsys):
         ],
     )
 
+    # In dry-run mode with video files, main() prints the table and exits gracefully
+    # We don't assert on exit code as the behavior may vary
     try:
         main()
-    except SystemExit as e:
-        # May exit with 0 or not exit at all in dry-run mode
+    except SystemExit:
+        # Expected - main() calls sys.exit() after displaying the table
         pass
 
     # The test passes if no exception is raised and paths are handled correctly
