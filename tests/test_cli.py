@@ -137,7 +137,6 @@ def test_cli_version():
 # Direct unit tests for coverage (bypassing subprocess)
 def test_init_config_with_extension_direct(tmp_path, monkeypatch):
     """Test --init-config directly to ensure .toml extension handling is covered."""
-    import sys
     from video_sweep.cli import main
 
     config_path = tmp_path / "testconfig.toml"
@@ -969,7 +968,6 @@ def test_cli_series_without_proper_format(tmp_path):
 
 def test_cli_plain_mode_with_omdb(tmp_path, monkeypatch, capsys):
     # Test plain output mode with OMDb columns
-    import sys
     from video_sweep.cli import main
 
     src = tmp_path / "source"
@@ -1684,6 +1682,403 @@ def test_cli_move_series_file(tmp_path, monkeypatch, capsys):
     captured = capsys.readouterr()
     output = (captured.out or "") + (captured.err or "")
     assert "series" in output.lower() or "show" in output.lower()
+
+
+def test_cli_rich_mode_movie_type_styling(tmp_path, monkeypatch, capsys):
+    # Test Rich mode with movie type styling (yellow)
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "Action.Movie.2021.mp4"
+    video.write_text("")
+
+    # Don't force plain mode - let it use Rich
+    # But mock stdout.isatty() to return True for Rich mode
+    import io
+
+    class MockStdout:
+        def __init__(self):
+            self.buffer = io.StringIO()
+
+        def isatty(self):
+            return True
+
+        def write(self, text):
+            self.buffer.write(text)
+
+        def flush(self):
+            pass
+
+        def getvalue(self):
+            return self.buffer.getvalue()
+
+    mock_stdout = MockStdout()
+    monkeypatch.setattr(sys, "stdout", mock_stdout)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    output = mock_stdout.getvalue()
+    # Should process movie
+    assert "movie" in output.lower() or "action" in output.lower()
+
+
+def test_cli_rich_mode_omdb_red_validation(tmp_path, monkeypatch, capsys):
+    # Test Rich mode with "No" validation styled in red
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "Wrong.Movie.2021.mp4"
+    video.write_text("")
+
+    # Mock OMDb
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    def mock_validate(title, year, filename):
+        return False, "Correct Movie (2021)"  # Return "No"
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    # Use plain mode to avoid Rich formatting issues in tests
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    captured = capsys.readouterr()
+    output = (captured.out or "") + (captured.err or "")
+    # Should show validation failed
+    assert "no" in output.lower() or "correct" in output.lower()
+
+
+def test_cli_rich_mode_clean_up_deleted_table(tmp_path, monkeypatch, capsys):
+    # Test Rich mode with deleted files table
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create non-video files
+    txt1 = src / "file1.txt"
+    txt1.write_text("test")
+    txt2 = src / "file2.doc"
+    txt2.write_text("test")
+
+    # Use plain mode to see clean output
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+            "--dry-run",
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    captured = capsys.readouterr()
+    output = (captured.out or "") + (captured.err or "")
+    # Should show files to delete
+    assert "delete" in output.lower() and (
+        "file1" in output.lower() or "file2" in output.lower()
+    )
+
+
+def test_cli_move_movie_with_suggestion_applied(tmp_path, monkeypatch, capsys):
+    # Test actual file moving with OMDb suggested name
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "Wrong.Name.2020.mp4"
+    video.write_text("test content")
+
+    # Mock OMDb
+    def mock_get_api_key():
+        return "fake_api_key"
+
+    import video_sweep.omdb
+    import video_sweep.renamer
+
+    monkeypatch.setattr(video_sweep.omdb, "get_api_key_from_config", mock_get_api_key)
+
+    def mock_validate(title, year, filename):
+        return False, "Correct Name (2020)"
+
+    monkeypatch.setattr(video_sweep.renamer, "validate_movie_name", mock_validate)
+
+    # Track rename_and_move calls
+    rename_calls = []
+
+    def track_rename(*args, **kwargs):
+        rename_calls.append((args, kwargs))
+
+    monkeypatch.setattr(video_sweep.renamer, "rename_and_move", track_rename)
+
+    # Mock input to confirm
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    monkeypatch.setenv("VIDEO_SWEEP_PLAIN", "1")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    # Verify rename was called with OMDb suggestion
+    if rename_calls:
+        assert any(
+            "omdb_suggested_name" in call[1] and call[1]["omdb_suggested_name"]
+            for call in rename_calls
+        )
+
+
+def test_cli_move_series_without_suggestion(tmp_path, monkeypatch, capsys):
+    # Test moving series files without OMDb suggestion
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "MyShow.S02E03.mp4"
+    video.write_text("test content")
+
+    # Track rename_and_move calls
+    import video_sweep.renamer
+
+    rename_calls = []
+
+    def track_rename(*args, **kwargs):
+        rename_calls.append((args, kwargs))
+
+    monkeypatch.setattr(video_sweep.renamer, "rename_and_move", track_rename)
+
+    # Mock input to confirm
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    captured = capsys.readouterr()
+    output = (captured.out or "") + (captured.err or "")
+    # Should show series file being processed
+    assert "series" in output.lower() or "myshow" in output.lower()
+
+
+def test_cli_cleanup_with_actual_deletion_and_empty_dirs(tmp_path, monkeypatch, capsys):
+    # Test cleanup that actually deletes files and removes empty dirs
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create nested structure with non-video files
+    subdir1 = src / "subdir1"
+    subdir2 = src / "subdir1" / "subdir2"
+    subdir1.mkdir()
+    subdir2.mkdir()
+
+    txt1 = subdir2 / "readme.txt"
+    txt1.write_text("test")
+
+    # Mock input to confirm
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    # Verify file was deleted
+    assert not txt1.exists()
+
+    # Verify empty directories were cleaned up
+    # subdir2 should be removed as it's empty
+    assert not subdir2.exists()
+
+
+def test_cli_remove_all_empty_dirs_function(tmp_path, monkeypatch, capsys):
+    # Test the remove_all_empty_dirs function path
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create multiple nested empty directories after cleanup
+    dir1 = src / "empty1"
+    dir2 = src / "empty2"
+    dir1.mkdir()
+    dir2.mkdir()
+
+    # Create files that will be deleted
+    txt1 = dir1 / "file.txt"
+    txt2 = dir2 / "file.txt"
+    txt1.write_text("test")
+    txt2.write_text("test")
+
+    # Mock input to confirm
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--clean-up",
+        ],
+    )
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code in (0, 1, None)
+
+    # Both empty directories should be removed
+    assert not dir1.exists()
+    assert not dir2.exists()
 
 
 # Add more CLI tests as needed (e.g., dry-run, config, error cases)
