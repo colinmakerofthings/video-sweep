@@ -103,13 +103,14 @@ def test_cli_init_config_auto_adds_toml_extension(tmp_path):
 
 def test_cli_no_arguments():
     """Test that running with no arguments exits gracefully."""
-    code, out, err = run_cli([])
-    # Accept both 0 (success) and 1 (usage error/help)
+    code, out, err = run_cli([
+        "--source", str(src),
+        "--movie-output", str(tgt),
+    ])
+    # Accept both 0 and 1 to match CLI behavior
     assert code in (0, 1)
-    # Should print empty table header, usage/help, or error message
     output = (out or "") + (err or "")
-    output = output.lower()
-    assert (
+    assert "required" in output.lower() or "error" in output.lower()
         "files to move" in output
         or "type" in output
         or "usage" in output
@@ -236,6 +237,94 @@ def test_path_normalization_direct(tmp_path, monkeypatch, capsys):
     captured = capsys.readouterr()
     # Should have processed the video file
     assert ".mp4" in captured.out or "movie" in captured.out.lower()
+
+
+# Additional CLI error path coverage
+import tempfile
+import os
+
+
+def test_cli_missing_source(tmp_path):
+    # Missing --source
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    tgt.mkdir()
+    series.mkdir()
+    code, out, err = run_cli(
+        [
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+        ]
+    )
+    assert code == 1
+    output = (out or "") + (err or "")
+    assert "required" in output.lower() or "error" in output.lower()
+
+
+def test_cli_missing_series_output(tmp_path):
+    # Missing --series-output
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    src.mkdir()
+    tgt.mkdir()
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--movie-output",
+            str(tgt),
+        ]
+    )
+    assert code == 1
+    output = (out or "") + (err or "")
+    assert "required" in output.lower() or "error" in output.lower()
+
+
+def test_cli_missing_movie_output(tmp_path):
+    # Missing --movie-output
+    src = tmp_path / "source"
+    series = tmp_path / "series"
+    src.mkdir()
+    series.mkdir()
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+        ]
+    )
+    assert code == 1
+    output = (out or "") + (err or "")
+    assert "required" in output.lower() or "error" in output.lower()
+
+
+def test_cli_invalid_config_file(tmp_path):
+    # Pass a config file that does not exist
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+    bad_config = tmp_path / "not_a_config.toml"
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--config",
+            str(bad_config),
+        ]
+    )
+    assert code == 1
+    output = (out or "") + (err or "")
+    assert "error" in output.lower() or "no such file" in output.lower()
 
 
 # Add more CLI tests as needed (e.g., dry-run, config, error cases)
