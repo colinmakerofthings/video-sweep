@@ -10,6 +10,8 @@ def find_files(source_dir: str):
     non_videos = []
     for root, _, files in os.walk(source_dir):
         for file in files:
+            if file.startswith("._"):
+                continue
             full_path = os.path.join(root, file)
             if os.path.splitext(file)[1].lower() in VIDEO_EXTENSIONS:
                 videos.append(full_path)
@@ -23,6 +25,8 @@ def find_videos(source_dir: str):
     videos = []
     for root, _, files in os.walk(source_dir):
         for file in files:
+            if file.startswith("._"):
+                continue
             if os.path.splitext(file)[1].lower() in VIDEO_EXTENSIONS:
                 videos.append(os.path.join(root, file))
     return videos
