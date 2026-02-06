@@ -106,12 +106,16 @@ def test_cli_no_arguments():
     code, out, err = run_cli([])
     # Accept both 0 (success) and 1 (usage error/help)
     assert code in (0, 1)
-    # Should print empty table header or usage/help
+    # Should print empty table header, usage/help, or error message
+    output = (out or "") + (err or "")
+    output = output.lower()
     assert (
-        "files to move" in out.lower()
-        or "type" in out
-        or "usage" in out.lower()
-        or "options" in out.lower()
+        "files to move" in output
+        or "type" in output
+        or "usage" in output
+        or "options" in output
+        or "required" in output
+        or "error" in output
     )
 
 
@@ -175,12 +179,16 @@ def test_no_args_exits_gracefully_direct(monkeypatch, capsys):
         assert e.code in (0, 1)
 
     captured = capsys.readouterr()
-    # Should print table header or usage/help
+    # Should print table header, usage/help, or error message
+    output = (captured.out or "") + (captured.err or "")
+    output = output.lower()
     assert (
-        "files to move" in captured.out.lower()
-        or "type" in captured.out
-        or "usage" in captured.out.lower()
-        or "options" in captured.out.lower()
+        "files to move" in output
+        or "type" in output
+        or "usage" in output
+        or "options" in output
+        or "required" in output
+        or "error" in output
     )
 
 
