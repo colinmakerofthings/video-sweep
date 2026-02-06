@@ -55,9 +55,9 @@ def main():
     if args.init_config:
         # Ensure .toml extension
         config_path = args.init_config
-        if not config_path.endswith('.toml'):
+        if not config_path.endswith(".toml"):
             config_path = f"{config_path}.toml"
-        
+
         sample = (
             "# Sample video-sweep config file\n"
             'source = "/Users/YOUR_USERNAME/Downloads"\n'
