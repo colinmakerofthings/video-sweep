@@ -16,6 +16,8 @@ CLI tool to find, classify, intelligently rename, and move video files to user-s
 - Basic error handling and console warnings for skipped files
 - Dry run mode for safe preview
 - Console table output with color-coded type column (movies: yellow, series: blue)
+- Cross-platform support (Windows, macOS, Linux)
+- Python 3.8 - 3.11 compatible
 
 ## Installation
 
