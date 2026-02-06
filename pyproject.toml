@@ -1,6 +1,6 @@
 [project]
 name = "video-sweep"
-version = "0.1.0"
+version = "0.2.0"
 description = "Minimal CLI tool to find, classify, rename, and move video files."
 	authors = [{ name = "Colin Brown", email = "colinmakerofthings@gmail.com" }]
 [project.license]
