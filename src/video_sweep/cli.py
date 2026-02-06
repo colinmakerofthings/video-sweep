@@ -53,17 +53,22 @@ def main():
 
     # Handle --init-config
     if args.init_config:
+        # Ensure .toml extension
+        config_path = args.init_config
+        if not config_path.endswith(".toml"):
+            config_path = f"{config_path}.toml"
+
         sample = (
             "# Sample video-sweep config file\n"
-            'source = "C:/Downloads"\n'
-            'series_output = "D:/Media/Series"\n'
-            'movie_output = "D:/Media/Movies"\n'
+            'source = "/Users/YOUR_USERNAME/Downloads"\n'
+            'series_output = "/Users/YOUR_USERNAME/Movies/TV Shows"\n'
+            'movie_output = "/Users/YOUR_USERNAME/Movies"\n'
             "clean_up = false\n"
             "dry_run = false\n"
         )
-        with open(args.init_config, "w", encoding="utf-8") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             f.write(sample)
-        print(f"Sample config written to {args.init_config}")
+        print(f"Sample config written to {config_path}")
         sys.exit(0)
 
     # Load config file if specified or present in current directory
@@ -94,9 +99,9 @@ def main():
             else config.get(opt, default)
         )
 
-    source = os.path.normpath(get_opt("source"))
-    series_output = os.path.normpath(get_opt("series_output"))
-    movie_output = os.path.normpath(get_opt("movie_output"))
+    source = get_opt("source")
+    series_output = get_opt("series_output")
+    movie_output = get_opt("movie_output")
     dry_run = get_opt("dry_run", False)
     clean_up = get_opt("clean_up", False)
 
@@ -123,6 +128,11 @@ def main():
             print(rich_buffer.getvalue(), flush=True)
             sys.stdout.flush()
         sys.exit(0)
+
+    # Normalize paths after validation
+    source = os.path.normpath(source)
+    series_output = os.path.normpath(series_output)
+    movie_output = os.path.normpath(movie_output)
 
     try:
         use_plain = os.environ.get("VIDEO_SWEEP_PLAIN") or not sys.stdout.isatty()
