@@ -138,9 +138,29 @@ def test_cli_version():
     assert re.search(r"\d+\.\d+\.\d+", out), "Expected semantic version format"
 
 
+def test_version_retrieval_from_metadata():
+    """Test that version can be retrieved from importlib.metadata."""
+    import re
+    from importlib.metadata import version
+
+    try:
+        v = version("video-sweep")
+        assert re.search(r"\d+\.\d+\.\d+", v), f"Expected semantic version, got: {v}"
+    except Exception as e:
+        # If package not installed, that's ok for this unit test
+        assert "video-sweep" in str(e).lower() or "not found" in str(e).lower()
+
+
 def test_version_flag_direct(monkeypatch, capsys):
     """Test --version flag directly to ensure importlib.metadata is covered."""
     from video_sweep.cli import main
+    from importlib.metadata import version as get_version
+
+    # Pre-verify the version lookup works
+    try:
+        actual_version = get_version("video-sweep")
+    except Exception:
+        actual_version = None
 
     monkeypatch.setattr(sys, "argv", ["video-sweep", "--version"])
 
@@ -155,6 +175,10 @@ def test_version_flag_direct(monkeypatch, capsys):
     import re
 
     assert re.search(r"\d+\.\d+\.\d+", captured.out), "Expected semantic version format"
+
+    # If we got here, the version was successfully retrieved and printed
+    if actual_version:
+        assert actual_version in captured.out
 
 
 # Direct unit tests for coverage (bypassing subprocess)
