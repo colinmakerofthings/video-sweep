@@ -1,1 +1,1 @@
-__version__ = "0.2.0"
+"""video-sweep: CLI tool to find, classify, rename, and move video files."""
