@@ -132,6 +132,19 @@ def test_cli_version():
     code, out, err = run_cli(["--version"])
     assert code == 0
     assert "version" in out.lower()
+    assert "0.3.0" in out  # Verify the actual version is printed
+
+
+def test_version_flag_direct(monkeypatch):
+    """Test --version flag directly to ensure importlib.metadata is covered."""
+    from video_sweep.cli import main
+
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--version"])
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code == 0
 
 
 # Direct unit tests for coverage (bypassing subprocess)
