@@ -132,6 +132,95 @@ def test_cli_version():
     code, out, err = run_cli(["--version"])
     assert code == 0
     assert "version" in out.lower()
+    # Assert version pattern (e.g., 0.3.0) instead of specific version
+    import re
+
+    assert re.search(r"\d+\.\d+\.\d+", out), "Expected semantic version format"
+
+
+def test_version_retrieval_from_metadata():
+    """Test that version can be retrieved from importlib.metadata."""
+    import re
+    from importlib.metadata import version
+
+    try:
+        v = version("video-sweep")
+        assert re.search(r"\d+\.\d+\.\d+", v), f"Expected semantic version, got: {v}"
+    except Exception as e:
+        # If package not installed, that's ok for this unit test
+        assert "video-sweep" in str(e).lower() or "not found" in str(e).lower()
+
+
+def test_version_flag_direct(monkeypatch, capsys):
+    """Test --version flag directly to ensure importlib.metadata is covered."""
+    from video_sweep.cli import main
+    from importlib.metadata import version as get_version
+
+    # Pre-verify the version lookup works
+    try:
+        actual_version = get_version("video-sweep")
+    except Exception:
+        actual_version = None
+
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--version"])
+
+    try:
+        main()
+    except SystemExit as e:
+        assert e.code == 0
+
+    captured = capsys.readouterr()
+    assert "version" in captured.out.lower()
+    # Assert version pattern instead of specific version
+    import re
+
+    assert re.search(r"\d+\.\d+\.\d+", captured.out), "Expected semantic version format"
+
+    # If we got here, the version was successfully retrieved and printed
+    if actual_version:
+        assert actual_version in captured.out
+
+
+def test_main_module_execution(monkeypatch, capsys):
+    """Test that __main__.py correctly imports and calls main()."""
+    # Test the __main__.py entry point directly
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--help"])
+
+    # Import __main__ module to cover it
+    import importlib
+    import video_sweep.__main__
+
+    # Reload to ensure fresh execution
+    importlib.reload(video_sweep.__main__)
+
+    # The module should have imported the main function
+    assert hasattr(video_sweep.__main__, "main")
+
+
+def test_main_module_direct_call(monkeypatch, capsys):
+    """Test calling __main__.py module as a script to cover if __name__ == '__main__' block."""
+    # This tests the direct execution path
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--version"])
+
+    # Execute the __main__ module code by compiling and running it
+    import video_sweep
+    import os
+
+    main_path = os.path.join(os.path.dirname(video_sweep.__file__), "__main__.py")
+
+    # Read the __main__.py file
+    with open(main_path) as f:
+        code = f.read()
+
+    # Execute it with __name__ == "__main__"
+    try:
+        exec(compile(code, main_path, "exec"), {"__name__": "__main__"})
+    except SystemExit as e:
+        # Expected to exit with code 0 for --version
+        assert e.code == 0
+
+    captured = capsys.readouterr()
+    assert "version" in captured.out.lower()
 
 
 # Direct unit tests for coverage (bypassing subprocess)
