@@ -8,19 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Automated release workflow with GitHub Actions
 - Single-source versioning from pyproject.toml
 - Auto-generated changelog from git commits
 
 ### Changed
+
 - Improved series classification regex to support all season numbers (not just S01-S05)
 
 ### Fixed
+
 - Series episodes now correctly classified (e.g., s08e01 recognized as series, not movie)
 
-## [0.2.0] - Previous release
+## [0.2.0] - 2024-01-15
 
-### Added
+### Features
+
 - OMDb API integration for movie validation
 - Rich console output with colored tables
 - Cross-platform support (Windows, macOS, Linux)
@@ -28,9 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dry run mode
 - Config file support
 
-## [0.1.0] - Initial release
+## [0.1.0] - 2023-12-01
 
-### Added
+### Initial Release
+
 - Basic video file finding and classification
 - Movie and series detection
 - File renaming and moving
