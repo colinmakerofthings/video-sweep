@@ -132,10 +132,13 @@ def test_cli_version():
     code, out, err = run_cli(["--version"])
     assert code == 0
     assert "version" in out.lower()
-    assert "0.3.0" in out  # Verify the actual version is printed
+    # Assert version pattern (e.g., 0.3.0) instead of specific version
+    import re
+
+    assert re.search(r"\d+\.\d+\.\d+", out), "Expected semantic version format"
 
 
-def test_version_flag_direct(monkeypatch):
+def test_version_flag_direct(monkeypatch, capsys):
     """Test --version flag directly to ensure importlib.metadata is covered."""
     from video_sweep.cli import main
 
@@ -145,6 +148,13 @@ def test_version_flag_direct(monkeypatch):
         main()
     except SystemExit as e:
         assert e.code == 0
+
+    captured = capsys.readouterr()
+    assert "version" in captured.out.lower()
+    # Assert version pattern instead of specific version
+    import re
+
+    assert re.search(r"\d+\.\d+\.\d+", captured.out), "Expected semantic version format"
 
 
 # Direct unit tests for coverage (bypassing subprocess)
