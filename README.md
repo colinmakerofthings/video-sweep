@@ -1,6 +1,6 @@
 # video-sweep 🧹
 
-[![Python Versions](https://img.shields.io/pypi/pyversions/video-sweep)](https://pypi.org/project/video-sweep/)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://pypi.org/project/video-sweep/)
 [![License](https://img.shields.io/github/license/colinmakerofthings/video-sweep)](LICENSE)
 [![CI](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/colinmakerofthings/video-sweep/branch/main/graph/badge.svg)](https://codecov.io/gh/colinmakerofthings/video-sweep)
