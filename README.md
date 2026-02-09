@@ -1,5 +1,11 @@
 # video-sweep 🧹
 
+[![Python Versions](https://img.shields.io/pypi/pyversions/video-sweep)](https://pypi.org/project/video-sweep/)
+[![License](https://img.shields.io/github/license/colinmakerofthings/video-sweep)](LICENSE)
+[![CI](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/colinmakerofthings/video-sweep/branch/main/graph/badge.svg)](https://codecov.io/gh/colinmakerofthings/video-sweep)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-d7ff64.svg)](https://docs.astral.sh/ruff/)
+
 CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
 
 ## Features
