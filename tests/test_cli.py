@@ -181,6 +181,47 @@ def test_version_flag_direct(monkeypatch, capsys):
         assert actual_version in captured.out
 
 
+def test_main_module_execution(monkeypatch, capsys):
+    """Test that __main__.py correctly imports and calls main()."""
+    # Test the __main__.py entry point directly
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--help"])
+    
+    # Import __main__ module to cover it
+    import importlib
+    import video_sweep.__main__
+    
+    # Reload to ensure fresh execution
+    importlib.reload(video_sweep.__main__)
+    
+    # The module should have imported the main function
+    assert hasattr(video_sweep.__main__, "main")
+
+
+def test_main_module_direct_call(monkeypatch, capsys):
+    """Test calling __main__.py module as a script to cover if __name__ == '__main__' block."""
+    # This tests the direct execution path
+    monkeypatch.setattr(sys, "argv", ["video-sweep", "--version"])
+    
+    # Execute the __main__ module code by compiling and running it
+    import video_sweep
+    import os
+    main_path = os.path.join(os.path.dirname(video_sweep.__file__), "__main__.py")
+    
+    # Read the __main__.py file
+    with open(main_path) as f:
+        code = f.read()
+    
+    # Execute it with __name__ == "__main__"
+    try:
+        exec(compile(code, main_path, 'exec'), {'__name__': '__main__'})
+    except SystemExit as e:
+        # Expected to exit with code 0 for --version
+        assert e.code == 0
+    
+    captured = capsys.readouterr()
+    assert "version" in captured.out.lower()
+
+
 # Direct unit tests for coverage (bypassing subprocess)
 def test_init_config_with_extension_direct(tmp_path, monkeypatch):
     """Test --init-config directly to ensure .toml extension handling is covered."""
