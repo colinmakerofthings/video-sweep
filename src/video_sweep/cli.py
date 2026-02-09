@@ -51,9 +51,9 @@ def main():
     args = parser.parse_args()
     # Handle --version
     if getattr(args, "version", False):
-        from . import __version__
+        from importlib.metadata import version
 
-        print(f"video-sweep version {__version__}")
+        print(f"video-sweep version {version('video-sweep')}")
         sys.exit(0)
 
     # Handle --init-config
@@ -76,13 +76,15 @@ def main():
         print(f"Sample config written to {config_path}")
         sys.exit(0)
 
-    # Load config file if specified or present in current directory
+    # Load config file if specified, or auto-load only when no CLI options are set
     config = {}
-    config_path = args.config or (
-        os.path.join(os.getcwd(), "config.toml")
-        if os.path.exists("config.toml")
-        else None
-    )
+    has_cli_values = any(
+        getattr(args, opt) is not None
+        for opt in ("source", "series_output", "movie_output")
+    ) or any(hasattr(args, opt) for opt in ("dry_run", "clean_up"))
+    config_path = args.config
+    if not config_path and not has_cli_values and os.path.exists("config.toml"):
+        config_path = os.path.join(os.getcwd(), "config.toml")
     if config_path:
         try:
             with open(config_path, "rb") as f:

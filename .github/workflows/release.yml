@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "## Changes" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "Initial release" >> RELEASE_NOTES.md
+          else
+            echo "## Changes since $PREVIOUS_TAG" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges >> RELEASE_NOTES.md
+          fi
+          cat RELEASE_NOTES.md
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: RELEASE_NOTES.md
+          files: dist/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG.md
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          DATE=$(date +%Y-%m-%d)
+          
+          # Create changelog header
+          echo "# Changelog" > CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          echo "## [$TAG_NAME] - $DATE" >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          cat RELEASE_NOTES.md | tail -n +3 >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          
+          # Append existing changelog if it exists
+          if [ -f CHANGELOG.md ]; then
+            tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
+          fi
+          
+          mv CHANGELOG_NEW.md CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG for ${GITHUB_REF#refs/tags/}" || exit 0
+          git push origin HEAD:main
