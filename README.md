@@ -13,7 +13,7 @@
 [![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20linux%20%7C%20macos-blue)](https://github.com/colinmakerofthings/video-sweep)
 <!-- badges: end -->
 
-CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
+A CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
 
 ## Features
 
@@ -26,7 +26,7 @@ CLI tool to find, classify, intelligently rename, and move video files to user-s
     - Example: `SeriesName (2014) - S04E01 -EpisodeTitle.mkv` → `SeriesName S04E01.mkv` in `series_output/SeriesName/Season 4/`
 - Cleans up non-video files (optional)
 - All paths provided via CLI arguments or config
-- Basic error handling and console warnings for skipped files
+- Error handling and console warnings for skipped files
 - Dry run mode for safe preview
 - Console table output with color-coded type column
 - Cross-platform support (Windows, macOS, Linux)
