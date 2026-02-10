@@ -341,21 +341,6 @@ def main():
 
                 remove_all_empty_dirs(source)
 
-        # Validation table for movie names
-        def print_validation_table(files):
-            print(f"{'Current Name':40} | {'Valid':5} | {'Suggested Name':40}")
-            print("-" * 90)
-            for f in files:
-                extracted_title, extracted_year = extract_title_year(
-                    f
-                )  # Assume this exists
-                correct, suggested = validate_movie_name(
-                    extracted_title, extracted_year, f
-                )
-                valid_str = "Yes" if correct else "No"
-                suggested_str = suggested if suggested else ""
-                print(f"{f:40} | {valid_str:5} | {suggested_str:40}")
-
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
