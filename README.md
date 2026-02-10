@@ -13,7 +13,7 @@
 [![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20linux%20%7C%20macos-blue)](https://github.com/colinmakerofthings/video-sweep)
 <!-- badges: end -->
 
-CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
+A CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
 
 ## Features
 
