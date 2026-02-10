@@ -135,13 +135,16 @@ def test_remove_empty_parents_with_symlink():
             # Skip test if symlinks not supported (e.g., Windows without admin)
             pytest.skip("Symlinks not supported on this system")
 
-        # Remove d2 via symlink path
+        # Verify symlink was created
+        assert os.path.islink(symlink_path)
+
+        # Remove empty parents starting from the symlink path
         remove_empty_parents(symlink_path, root)
 
-        # The actual directories should be removed, symlink may remain
-        # depending on OS behavior
-        assert not os.path.exists(d2)
-        assert not os.path.exists(d1)
+        # The symlink should be removed
+        assert not os.path.islink(symlink_path)
+        # The target directory remains (symlink is removed, not the target)
+        assert os.path.exists(d2)
 
 
 @pytest.mark.parametrize("depth", [1, 5, 10, 20])
