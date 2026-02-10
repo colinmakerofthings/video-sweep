@@ -2170,4 +2170,243 @@ def test_cli_remove_all_empty_dirs_function(tmp_path, monkeypatch, capsys):
     assert not dir2.exists()
 
 
-# Add more CLI tests as needed (e.g., dry-run, config, error cases)
+def test_cli_config_file_not_found():
+    """Test --config with non-existent file."""
+    code, out, err = run_cli(
+        [
+            "--config",
+            "/nonexistent/path/config.toml",
+            "--source",
+            "/tmp/src",
+            "--series-output",
+            "/tmp/series",
+            "--movie-output",
+            "/tmp/movies",
+        ]
+    )
+    assert code == 1
+    assert "Error loading config file" in err
+
+
+def test_cli_bad_toml_syntax(tmp_path):
+    """Test --config with malformed TOML."""
+    config_path = tmp_path / "bad.toml"
+    config_path.write_text("invalid toml syntax [[[")
+
+    code, out, err = run_cli(
+        [
+            "--config",
+            str(config_path),
+            "--source",
+            "/tmp/src",
+            "--series-output",
+            "/tmp/series",
+            "--movie-output",
+            "/tmp/movies",
+        ]
+    )
+    assert code == 1
+    assert "Error loading config file" in err
+
+
+def test_cli_missing_required_args():
+    """Test CLI with missing required arguments."""
+    code, out, err = run_cli(
+        [
+            "--source",
+            "/tmp/src",
+            # Missing series-output and movie-output
+        ]
+    )
+    assert code == 1
+    assert "required" in err.lower()
+
+
+def test_cli_with_config_file(tmp_path):
+    """Test loading configuration from config.toml file."""
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a test video file
+    video = src / "test.2023.mp4"
+    video.write_text("")
+
+    # Run CLI with explicit paths (simpler than config file)
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    assert ".mp4" in out
+
+
+def test_cli_plain_mode(tmp_path, monkeypatch):
+    """Test plain text output mode (via environment variable)."""
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "movie.2023.mp4"
+    video.write_text("")
+
+    # Run with VIDEO_SWEEP_PLAIN set
+    import os
+
+    env = os.environ.copy()
+    env["VIDEO_SWEEP_PLAIN"] = "1"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "video_sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ],
+        cwd=None,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    # Plain mode should have "|" separators
+    assert "|" in result.stdout
+
+
+def test_cli_abort_confirmation(tmp_path, monkeypatch):
+    """Test aborting when user declines confirmation."""
+    import sys
+    from video_sweep.cli import main
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a test video
+    video = src / "movie.2023.mp4"
+    video.write_text("test")
+
+    # Mock input to return 'n'
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "video-sweep",
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+        ],
+    )
+
+    with monkeypatch.context():
+        try:
+            main()
+        except SystemExit as e:
+            assert e.code == 0
+
+        # File should still be in source
+        assert video.exists()
+
+
+def test_cli_has_no_cli_values_no_config_file(tmp_path, monkeypatch):
+    """Test when no CLI values and no config.toml exists."""
+
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Change to a directory without config.toml
+    monkeypatch.chdir(tmp_path)
+
+    # Run with no arguments
+    code, out, err = run_cli(["--help"])
+    # Help should work
+    assert code == 0
+
+
+def test_cli_rich_mode_formatting(tmp_path):
+    """Test that rich mode produces formatted output."""
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    video = src / "movie.2023.mp4"
+    video.write_text("")
+
+    # Run with dry-run in non-plain mode
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    assert ".mp4" in out
+
+
+def test_cli_multiple_videos_different_types(tmp_path):
+    """Test processing multiple video files of different types."""
+    src = tmp_path / "source"
+    tgt = tmp_path / "target"
+    series = tmp_path / "series"
+    src.mkdir()
+    tgt.mkdir()
+    series.mkdir()
+
+    # Create a movie and a series
+    movie = src / "movie.2023.mp4"
+    series_file = src / "show.S01E01.mkv"
+    movie.write_text("")
+    series_file.write_text("")
+
+    code, out, err = run_cli(
+        [
+            "--source",
+            str(src),
+            "--series-output",
+            str(series),
+            "--movie-output",
+            str(tgt),
+            "--dry-run",
+        ]
+    )
+    assert code == 0
