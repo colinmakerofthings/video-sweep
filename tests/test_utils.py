@@ -138,13 +138,17 @@ def test_remove_empty_parents_with_symlink():
         # Verify symlink was created
         assert os.path.islink(symlink_path)
 
-        # Remove empty parents starting from the symlink path
+        # Call remove_empty_parents with symlink path
+        # Since root contains both d1 and the symlink, it's not empty
+        # So no parent directories should be removed
         remove_empty_parents(symlink_path, root)
 
-        # The symlink should be removed
-        assert not os.path.islink(symlink_path)
-        # The target directory remains (symlink is removed, not the target)
+        # Symlink should remain (not a parent, just the starting path)
+        assert os.path.islink(symlink_path)
+        # Target directory should remain
         assert os.path.exists(d2)
+        # Parent directories should remain (root is not empty)
+        assert os.path.exists(d1)
 
 
 @pytest.mark.parametrize("depth", [1, 5, 10, 20])
