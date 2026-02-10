@@ -1,10 +1,17 @@
 # video-sweep 🧹
 
+<!-- badges: start -->
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://pypi.org/project/video-sweep/)
-[![License](https://img.shields.io/github/license/colinmakerofthings/video-sweep)](LICENSE)
-[![CI](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![Coverage](https://codecov.io/gh/colinmakerofthings/video-sweep/branch/main/graph/badge.svg)](https://codecov.io/gh/colinmakerofthings/video-sweep)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-d7ff64.svg)](https://docs.astral.sh/ruff/)
+[![Security: ruff](https://img.shields.io/badge/security-ruff%20S-orange)](https://docs.astral.sh/ruff/rules/#security-s)
+[![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/colinmakerofthings/3f0b9f2036efb67bdfadb6b54c4c8f63/raw/video-sweep-tests.json)](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/video-sweep)](https://pypi.org/project/video-sweep/)
+[![Downloads](https://img.shields.io/pypi/dm/video-sweep)](https://pypi.org/project/video-sweep/)
+[![CI](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/colinmakerofthings/video-sweep/actions/workflows/ci.yml)
+[![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20linux%20%7C%20macos-blue)](https://github.com/colinmakerofthings/video-sweep)
+<!-- badges: end -->
 
 CLI tool to find, classify, intelligently rename, and move video files to user-specified locations. Optionally, clean up non-video files.
 
@@ -102,4 +109,3 @@ If the API key is not set, validation will be skipped automatically.
 ## License
 
 MIT
-

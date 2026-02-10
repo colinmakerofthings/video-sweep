@@ -1,11 +1,13 @@
 import os
 
-
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v"}
 
 
 def find_files(source_dir: str):
-    """Recursively find all files in the source directory, returning (videos, non_videos)."""
+    """Recursively find all files in the source directory.
+
+    Returns (videos, non_videos).
+    """
     videos = []
     non_videos = []
     for root, _, files in os.walk(source_dir):

@@ -1,6 +1,7 @@
 import argparse
 import sys
 import os
+import logging
 from rich.console import Console
 from rich.table import Table
 import tomli
@@ -232,7 +233,9 @@ def main():
             print(header)
             print("-" * len(header))
             for r in results:
-                row = f"{os.path.basename(os.path.normpath(r['file']))} | {r['type']} | {os.path.normpath(r['target'])}"
+                file_name = os.path.basename(os.path.normpath(r["file"]))
+                target = os.path.normpath(r["target"])
+                row = f"{file_name} | {r['type']} | {target}"
                 if show_omdb_columns:
                     row += f" | {r.get('valid', '')} | {r.get('suggested', '')}"
                 print(row)
@@ -325,7 +328,8 @@ def main():
                     # Remove empty parent folders up to source dir
                     remove_empty_parents(os.path.dirname(file), source)
 
-                # After all deletions, remove any empty folders in the source directory tree (silently)
+                # After all deletions, remove any empty folders in the
+                # source directory tree (silently)
                 def remove_all_empty_dirs(root_dir):
                     for dirpath, dirnames, filenames in os.walk(
                         root_dir, topdown=False
@@ -336,8 +340,10 @@ def main():
                         if not dirnames and not filenames:
                             try:
                                 os.rmdir(dirpath)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logging.debug(
+                                    f"Could not remove empty directory {dirpath}: {e}"
+                                )
 
                 remove_all_empty_dirs(source)
 
