@@ -63,17 +63,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-          pip install -e .
       - name: Run tests with coverage
+        id: pytest
         run: |
-          coverage run -m pytest
+          coverage run -m pytest -v | tee pytest-output.txt
           coverage report
           coverage xml
-      - name: Upload coverage to Codecov
+          echo "tests=$(grep -o '[0-9]* passed' pytest-output.txt | grep -o '[0-9]*' || echo '0')" >> $GITHUB_OUTPUT
+      - name: Update test count badge
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 3f0b9f2036efb67bdfadb6b54c4c8f63
+          filename: video-sweep-tests.json
+          label: tests
+          message: ${{ steps.pytest.outputs.tests }} passed
+          color: brightgreen
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml

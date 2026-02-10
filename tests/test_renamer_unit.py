@@ -114,7 +114,8 @@ def test_validate_movie_name_with_omdb_match():
         with patch(
             "video_sweep.renamer.get_suggested_name", side_effect=mock_suggested
         ):
-            # Note: validate_movie_name compares normalized names. The input name is without extension
+            # Note: validate_movie_name compares normalized names.
+            # The input name is without extension
             result, suggested = validate_movie_name(
                 "The Matrix", "1999", "The Matrix [1999]"
             )

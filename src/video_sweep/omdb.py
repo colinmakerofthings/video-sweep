@@ -30,7 +30,7 @@ def query_omdb(title, year=None):
     params = {"t": title, "apikey": api_key}
     if year:
         params["y"] = str(year)
-    response = requests.get("http://www.omdbapi.com/", params=params)
+    response = requests.get("http://www.omdbapi.com/", params=params, timeout=10)
     if response.status_code == 200:
         data = response.json()
         if data.get("Response") == "True":
@@ -41,7 +41,9 @@ def query_omdb(title, year=None):
 
     def fuzzy_search(search_title, intended_title, intended_year=None):
         search_params = {"s": search_title, "apikey": api_key}
-        search_response = requests.get("http://www.omdbapi.com/", params=search_params)
+        search_response = requests.get(
+            "http://www.omdbapi.com/", params=search_params, timeout=10
+        )
         if search_response.status_code == 200:
             search_data = search_response.json()
             if search_data.get("Response") == "True" and "Search" in search_data:
@@ -69,7 +71,7 @@ def query_omdb(title, year=None):
                     if imdb_id:
                         id_params = {"i": imdb_id, "apikey": api_key}
                         id_response = requests.get(
-                            "http://www.omdbapi.com/", params=id_params
+                            "http://www.omdbapi.com/", params=id_params, timeout=10
                         )
                         if id_response.status_code == 200:
                             id_data = id_response.json()

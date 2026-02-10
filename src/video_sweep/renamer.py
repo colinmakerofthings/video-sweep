@@ -50,7 +50,8 @@ def rename_and_move(
     dry_run: bool = False,
     omdb_suggested_name: str = None,
 ) -> None:
-    """Rename and move the video file to the target directory. If dry_run, only print the action.
+    """Rename and move the video file to the target directory.
+    If dry_run, only print the action.
     If omdb_suggested_name is provided (and kind==movie), use it as the new filename."""
     filename = os.path.basename(filepath)
     # All types: move directly to target_dir, no subfolder
@@ -109,7 +110,8 @@ def rename_and_move(
 def series_new_filename(filename: str) -> tuple:
     """
     Generate new filename and output path for a series episode.
-    Returns (series_name, season_num, episode_code, new_filename) or None if not matched.
+    Returns (series_name, season_num, episode_code, new_filename) or None if
+    not matched.
     """
     name, ext = os.path.splitext(filename)
     # Remove year in brackets, e.g. (2014)
