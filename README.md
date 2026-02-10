@@ -26,7 +26,7 @@ A CLI tool to find, classify, intelligently rename, and move video files to user
     - Example: `SeriesName (2014) - S04E01 -EpisodeTitle.mkv` → `SeriesName S04E01.mkv` in `series_output/SeriesName/Season 4/`
 - Cleans up non-video files (optional)
 - All paths provided via CLI arguments or config
-- Basic error handling and console warnings for skipped files
+- Error handling and console warnings for skipped files
 - Dry run mode for safe preview
 - Console table output with color-coded type column
 - Cross-platform support (Windows, macOS, Linux)
